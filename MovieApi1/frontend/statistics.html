@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İstatistikler</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/statistics.css">
+    <link rel="stylesheet" href="css/message.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">MovieAdmin</div>
+    <ul>
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="library.html">İçerik Yönetimi</a></li>
+        <li><a href="movie-form.html">Yeni İçerik</a></li>
+        <li><a href="actors.html">Oyuncular</a></li>
+        <li class="active"><a href="statistics.html">İstatistikler</a></li>
+    </ul>
+    <ul style="margin-top: auto;">
+        <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+    </ul>
+</div>
+    </div>
+    <div class="main">
+        <header>
+            <div>
+                <h1>İstatistikler</h1>
+                <p class="subtitle">Kütüphanenin genel analizleri.</p>
+            </div>
+        </header>
+        <div class="stats-cards">
+            <div class="stat-card">
+                <h3>Toplam İçerik</h3>
+                <span id="totalContent">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Film</h3>
+                <span id="movieCount">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Dizi</h3>
+                <span id="seriesCount">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Ortalama IMDb</h3>
+                <span id="averageRating">0.0</span>
+            </div>
+        </div>
+        <div class="statistics-grid single-chart">
+            <div class="statistics-box">
+                <h2>Tür Dağılımı</h2>
+                <div class="chart-container">
+                    <canvas id="genreChart" aria-label="Tür dağılımı grafiği"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="statistics-box full">
+            <h2>En Yüksek IMDb Puanına Sahip İçerikler</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Başlık</th>
+                        <th>Tür</th>
+                        <th>IMDb</th>
+                    </tr>
+                </thead>
+                <tbody id="topRatedTable">
+                    <tr>
+                        <td colspan="3">Veri bulunamadı.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="js/auth-guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="statistics.js"></script>
+    <script src="language.js"></script>
+    <script src="js/message.js"></script>
+</body>
+</html>

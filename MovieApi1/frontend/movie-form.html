@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yeni İçerik | MovieAdmin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/form.css">
+    <link rel="stylesheet" href="css/message.css">
+    <link rel="stylesheet" href="css/newcontent.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">MovieAdmin</div>
+        <ul>
+            <li><a href="index.html">Dashboard</a></li>
+            <li><a href="library.html">İçerik Yönetimi</a></li>
+            <li class="active"><a href="movie-form.html">Yeni İçerik</a></li>
+            <li><a href="actors.html">Oyuncular</a></li>
+            <li><a href="statistics.html">İstatistikler</a></li>
+        </ul>
+        <ul style="margin-top: auto;">
+            <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+        </ul>
+
+        <!-- Oturum Bilgisi & Çıkış Alanı -->
+        <div class="sidebar-user-section" style="margin-top: auto; padding: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div id="userProfileBar" style="display: none; flex-direction: column; gap: 8px;">
+                <span id="welcomeUserText" style="color: #fff; font-size: 0.9rem; font-weight: bold;"></span>
+                <button id="logoutBtn" onclick="logout()" style="background: #e50914; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Çıkış Yap</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <header>
+            <div>
+                <h1>İçerik Arama & Aktarma</h1>
+                <p class="subtitle">Film veya dizi adını yazarak kütüphaneye aktarabilirsiniz.</p>
+            </div>
+        </header>
+        <div class="form-card">
+            <div class="search-area">
+                <input type="text" id="searchBox" placeholder="Batman, Harry Potter, Dark..." autocomplete="off">
+            </div>
+            <div id="loading" class="loader" style="display:none;"></div>
+            <div id="searchResults" class="search-grid"></div>
+        </div>
+    </div>
+    <script src="js/auth-guard.js"></script>
+    <script src="movie-form.js"></script>
+    <script src="language.js"></script>
+    <script src="js/message.js"></script>
+</body>
+</html>

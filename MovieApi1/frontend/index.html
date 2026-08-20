@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Admin Panel</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/message.css">
+</head>
+<body>
+    <!-- Sol Menü (Sidebar) -->
+    <aside class="sidebar">
+        <div class="logo">MovieAdmin</div>
+        <ul>
+            <li class="active"><a href="index.html">Dashboard</a></li>
+            <li><a href="library.html">İçerik Yönetimi</a></li>
+            <li><a href="movie-form.html">Yeni İçerik</a></li>
+            <li><a href="actors.html">Oyuncular</a></li>
+            <li><a href="statistics.html">İstatistikler</a></li>
+        </ul>
+        <ul style="margin-top: auto;">
+            <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+        </ul>
+    </aside>
+
+    <!-- Ana İçerik -->
+    <div class="main">
+        <header>
+            <div>
+                <h1>Dashboard</h1>
+                <p class="subtitle">Film ve dizi yönetim sistemi</p>
+            </div>
+            <div class="admin">👤 Admin</div>
+        </header>
+        <section class="cards">
+            <div class="card">
+                <h2 id="movieCount">0</h2>
+                <p>Toplam İçerik</p>
+            </div>
+            <div class="card">
+                <h2 id="filmCount">0</h2>
+                <p>Film</p>
+            </div>
+            <div class="card">
+                <h2 id="seriesCount">0</h2>
+                <p>Dizi</p>
+            </div>
+            <div class="card">
+                <h2 id="avgRating">0.0</h2>
+                <p>Ortalama IMDb</p>
+            </div>
+        </section>
+        <section class="quick-actions">
+            <a href="movie-form.html" class="action-card">➕ <span>Yeni İçerik</span></a>
+            <a href="library.html" class="action-card">🎞<span>İçerikleri Yönet</span></a>
+            <a href="actors.html" class="action-card">🎭<span>Oyuncuları Yönet</span></a>
+            <a href="statistics.html" class="action-card">📈<span>İstatistikler</span></a>
+        </section>
+        <section class="dashboard-search">
+            <input type="text" id="dashboardSearch" placeholder="Veritabanında içerik ara...">
+        </section>
+        <section class="table-area">
+            <div class="table-header">
+                <h2>Son Eklenen İçerikler</h2>
+                <a href="movie-form.html" class="addButton">+ Yeni İçerik</a>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Poster</th>
+                        <th>Başlık</th>
+                        <th>Tür</th>
+                        <th>Yıl</th>
+                        <th>IMDb</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody id="contentTable"></tbody>
+            </table>
+        </section>
+        <section class="dashboard-grid">
+            <div class="dashboard-box">
+                <h2>Son Güncellenenler</h2>
+                <ul id="recentUpdated"></ul>
+            </div>
+            <div class="dashboard-box">
+                <h2>En Çok Görünen Oyuncular</h2>
+                <ul id="featuredActors"></ul>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="admin.js"></script>
+    <script src="language.js"></script>
+    <script src="js/message.js"></script>
+    <script src="js/showcase.js" defer></script>
+</body>
+</html>

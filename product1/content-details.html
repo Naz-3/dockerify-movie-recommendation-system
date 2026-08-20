@@ -1,0 +1,181 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İçerik Detayları</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/details.css">
+    <link rel="stylesheet" href="css/message.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo">MovieAdmin</div>
+
+    <ul>
+        <li>
+            <a href="index.html">Dashboard</a>
+        </li>
+        <li class="active">
+            <a href="library.html">İçerik Yönetimi</a>
+        </li>
+        <li>
+            <a href="movie-form.html">Yeni Ä°Ã§erik</a>
+        </li>
+        <li>
+            <a href="actors.html">Oyuncular</a>
+        </li>
+        <li>
+            <a href="statistics.html">İstatistikler</a>
+        </li>
+        <li>
+            <a href="showcase.html">Daily</a>
+        </li>
+    </ul>
+    <ul style="margin-top: auto;">
+        <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+    </ul>
+</div>
+
+<div class="main">
+
+    <header>
+        <h1>İçerik Detayları</h1>
+    </header>
+
+    <div class="details-wrapper">
+
+    <div class="poster-panel">
+        <img id="poster" src="https://placehold.co/300x450?text=Poster">
+    </div>
+
+    <div class="details-panel">
+
+        <div class="detail-group">
+            <label>Başlık</label>
+            <p id="title">-</p>
+        </div>
+
+        <div class="detail-row">
+
+            <div class="detail-group">
+                <label>Yıl</label>
+                <p id="year">-</p>
+            </div>
+
+            <div class="detail-group">
+                <label>IMDb Puanı</label>
+                <p id="rating">-</p>
+            </div>
+
+        </div>
+
+        <div class="detail-row">
+
+            <div class="detail-group">
+                <label>Tür</label>
+                <p id="genre">-</p>
+            </div>
+
+            <div class="detail-group">
+                <label>Süre</label>
+                <p id="runtime">-</p>
+            </div>
+
+        </div>
+
+        <div class="detail-group">
+            <label>Yönetmen</label>
+            <p id="director">-</p>
+        </div>
+
+        <div class="detail-group">
+            <label>Yazar</label>
+            <p id="writer">-</p>
+        </div>
+
+        <div class="detail-group">
+            <label>Oyuncular</label>
+            <p id="actors">-</p>
+        </div>
+
+        <div class="detail-row">
+
+            <div class="detail-group">
+                <label>Ülke</label>
+                <p id="country">-</p>
+            </div>
+
+            <div class="detail-group">
+                <label>Dil</label>
+                <p id="language">-</p>
+            </div>
+
+        </div>
+
+        <div class="detail-group">
+            <label>Ödüller</label>
+            <p id="awards">-</p>
+        </div>
+
+        <div class="detail-group">
+            <label>Açıklama</label>
+            <p id="plot">-</p>
+        </div>
+
+    <section class="season-section">
+        <h2>Sezonlar</h2>
+        <div id="seasonList"></div>
+    </section>
+</div>
+
+<div id="episodeModal" class="episode-modal hidden">
+    <div class="episode-modal-content">
+        <span class="close-modal" onclick="closeEpisodeModal()">
+            &times;
+        </span>
+        <h2>Bölümü Düzenle</h2>
+        <img
+                id="modalPosterPreview"
+                src="https://placehold.co/250x360?text=Poster">
+
+        <div class="modal-group">
+            <label>Poster URL</label>
+            <input
+                    type="text"
+                    id="modalPoster">
+        </div>
+        <div class="modal-group">
+            <label>Özet</label>
+            <textarea
+                    id="modalPlot"
+                    rows="8"></textarea>
+
+        </div>
+        <div class="modal-buttons">
+
+            <button
+                    class="save-btn"
+                    onclick="saveEpisode()">
+                Kaydet
+
+            </button>
+            <button
+                    class="sync-btn"
+                    onclick="syncEpisode()">
+                OMDb ile Senkronize
+            </button>
+        </div>
+    </div>
+</div>
+<script src="js/auth-guard.js"></script>
+<script src="js/details.js"></script>
+<script src="js/message.js"></script>
+
+</body>
+</html>
+
+
+

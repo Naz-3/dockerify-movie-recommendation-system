@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kullanıcı Paneli - MovieApp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/user-panel.css">
+</head>
+<body class="user-panel-page">
+    <div class="mobile-navbar">
+        <button class="menu-toggle-btn" id="menuToggle">☰</button>
+        <div class="mobile-logo">MovieAdmin</div>
+        <div style="width: 24px;"></div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo">MovieAdmin</div>
+        <ul>
+            <li><a href="search.html">İçerik Ara / Ekle</a></li>
+            <li><a href="latest.html">Kütüphane</a></li>
+            <li><a href="favorites.html">Favorilerim</a></li>
+            <li><a href="watchlist.html">Daha Sonra İzle</a></li>
+            <li><a href="showcase.html">Daily (AI)</a></li>
+            <li><a href="#" onclick="logout()">Çıkış Yap</a></li>
+        </ul>
+    </div>
+
+    <!-- SAÄ Ä°Ã‡ERÄ°K ALANI -->
+    <main class="main-content-area">
+
+        <!-- 1. Ä°Ã‡ERÄ°K ARA / EKLE SAYFASI -->
+        <section id="search-add-page" class="panel-section active">
+            <div class="section-header">
+                <h2>🔍 İçerik Ara & Kütüphanene Ekle</h2>
+                <p>Veritabanındaki filmleri arayın veya izleme listenize eklemek için arama yapın.</p>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Film, dizi veya tÃ¼r adÄ± yazÄ±n...">
+                <button id="searchBtn" class="btn-primary">Ara</button>
+            </div>
+
+            <div id="searchResultsGrid" class="media-grid"></div>
+        </section>
+
+        <!-- 2. SON EKLENENLER SAYFASI -->
+        <section id="latest-page" class="panel-section">
+            <div class="section-header">
+                <h2>🔥 Son Eklenen İçerikler</h2>
+                <p>Platforma en son eklenen güncel film ve dizileri keşfedin.</p>
+            </div>
+            <div id="latestGrid" class="media-grid"></div>
+        </section>
+
+        <!-- 3. FAVORÄ°LERÄ°M SAYFASI -->
+        <section id="favorites-page" class="panel-section">
+            <div class="section-header">
+                <h2>❤️ Favorilerim</h2>
+                <p>Beğendiğiniz ve favorilerinize eklediğiniz içerikler.</p>
+            </div>
+            <div id="favoritesGrid" class="media-grid"></div>
+        </section>
+
+        <!-- 4. DAHA SONRA Ä°ZLE SAYFASI -->
+        <section id="watchlist-page" class="panel-section">
+            <div class="section-header">
+                <h2>📌 Daha Sonra İzle</h2>
+                <p>İzlemek üzere kaydettiğiniz kişisel listeniz.</p>
+            </div>
+            <div id="watchlistGrid" class="media-grid"></div>
+        </section>
+
+    </main>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="js/user-panel.js"></script>
+</body>
+</html>
+
+
+

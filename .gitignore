@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+
+target/
+.idea/
+.vscode/
+.vs/
+
+*.log
+MovieApi1/.git-old/

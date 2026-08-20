@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daha Sonra İzle - MovieApp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/user-panel.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">MovieAdmin</div>
+        <ul>
+            <li><a href="search.html">İçerik Ara / Ekle</a></li>
+            <li><a href="latest.html">Kütüphane</a></li>
+            <li><a href="favorites.html">Favorilerim</a></li>
+            <li class="active"><a href="watchlist.html">Daha Sonra İzle</a></li>
+            <li><a href="showcase.html">Daily (AI)</a></li>
+        </ul>
+
+        <ul style="margin-top: auto;">
+            <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+        </ul>
+    </div>
+
+    <main class="main-content-area">
+        <div class="section-header">
+            <h2>📌 Daha Sonra İzle</h2>
+            <p>İzlemek üzere kaydettiğiniz kişisel listeniz.</p>
+        </div>
+        <div id="watchlistGrid" class="media-grid"></div>
+    </main>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="js/user-panel.js"></script>
+</body>

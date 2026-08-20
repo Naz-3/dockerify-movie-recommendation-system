@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kullanıcı Paneli - MovieApp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/user-panel.css">
+</head>
+<body class="user-panel-page">
+
+    <!-- TEK VE SABİT SOL SIDEBAR -->
+    <div class="sidebar">
+    <div class="logo">MovieApp</div>
+    <ul>
+        <li><a href="admin.html">Dashboard</a></li>
+        <li><a href="showcase.html">Daily (AI)</a></li>
+        <li><a href="search.html">İçerik Ara / Ekle</a></li>
+        <li><a href="latest.html">Kütüphane</a></li>
+        <li><a href="favorites.html">Favorilerim</a></li>
+        <li><a href="watchlist.html">Daha Sonra İzle</a></li>
+    </ul>
+
+    <ul style="margin-top: auto;">
+        <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+    </ul>
+</div>
+
+    <!-- SAĞ İÇERİK ALANI -->
+    <main class="main-content-area">
+
+        <!-- 1. İÇERİK ARA / EKLE SAYFASI -->
+        <section id="search-add-page" class="panel-section active">
+            <div class="section-header">
+                <h2>🔍 İçerik Ara & Kütüphanene Ekle</h2>
+                <p>Veritabanındaki filmleri arayın veya izleme listenize eklemek için arama yapın.</p>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Film, dizi veya tür adı yazın...">
+                <button id="searchBtn" class="btn-primary">Ara</button>
+            </div>
+
+            <div class="results-header">
+                <h3>Arama Sonuçları</h3>
+            </div>
+            <div id="searchResultsGrid" class="media-grid"></div>
+        </section>
+
+        <!-- 2. SON EKLENENLER SAYFASI -->
+        <section id="latest-page" class="panel-section">
+            <div class="section-header">
+                <h2>🔥 Son Eklenen İçerikler</h2>
+                <p>Platforma en son eklenen güncel film ve dizileri keşfedin.</p>
+            </div>
+            <div id="latestGrid" class="media-grid"></div>
+        </section>
+
+        <!-- 3. FAVORİLERİM SAYFASI -->
+        <section id="favorites-page" class="panel-section">
+            <div class="section-header">
+                <h2>❤️ Favorilerim</h2>
+                <p>Beğendiğiniz ve favorilerinize eklediğiniz içerikler.</p>
+            </div>
+            <div id="favoritesGrid" class="media-grid"></div>
+        </section>
+
+        <!-- 4. DAHA SONRA İZLE SAYFASI -->
+        <section id="watchlist-page" class="panel-section">
+            <div class="section-header">
+                <h2>📌 Daha Sonra İzle</h2>
+                <p>İzlemek üzere kaydettiğiniz kişisel listeniz.</p>
+            </div>
+            <div id="watchlistGrid" class="media-grid"></div>
+        </section>
+
+    </main>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="js/user-panel.js"></script>
+</body>
+</html>

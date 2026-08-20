@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Vitrin Yönetimi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/showcase.css">
+</head>
+<body class="showcase-page">
+
+    <!-- SOL SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo">MovieAdmin</div>
+        <ul>
+            <li><a href="search.html">İçerik Ara / Ekle</a></li>
+            <li><a href="latest.html">Kütüphane</a></li>
+            <li><a href="favorites.html">Favorilerim</a></li>
+            <li><a href="watchlist.html">Daha Sonra İzle</a></li>
+            <li class="active"><a href="showcase.html">Daily (AI)</a></li>
+        </ul>
+
+        <ul style="margin-top: auto;">
+            <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+        </ul>
+    </div>
+
+    <!-- SAĞ ANA İÇERİK ALANI -->
+    <div class="showcase-container">
+        <!-- BAŞLIK -->
+        <div class="header-section">
+            <h2>AI Destekli Hava Durumu Vitrin Direktörü</h2>
+            <p>Sistem, mevcut oturum açan profilinizin kişisel izleme alışkanlıklarına ve seçtiğiniz şehrin hava durumuna göre veritabanından en uygun vitrin kombinasyonunu hazırlasın.</p>
+        </div>
+
+        <!-- AI KONTROL PANELİ -->
+        <div class="filter-panel">
+            <div class="user-profile-badge">
+                <span class="label">OTURUM AÇAN KULLANICI:</span>
+                <strong id="activeUsernameDisplay">user1</strong>
+            </div>
+
+            <div class="input-group">
+                <label for="cityInput">📍 LOKASYON (HAVA DURUMU)</label>
+                <input type="text" id="cityInput" list="cityList" placeholder="Şehir ara..." value="Aydın">
+                <datalist id="cityList"></datalist>
+            </div>
+
+            <button id="generateBtn" class="btn-generate">
+                ✨ AI Vitrin Kombinasyonu Oluştur
+            </button>
+        </div>
+
+        <!-- YÜKLENİYOR DURUMU -->
+        <div id="loading" class="hidden">
+            <p>⏳ Hava durumu ve kullanıcı alışkanlıkları analiz ediliyor, AI vitrin kurguluyor...</p>
+        </div>
+
+        <!-- VİTRİN VE HAVA DURUMU ÖNİZLEME KARTI -->
+        <div id="previewCard" class="preview-card hidden">
+            <!-- Sol Taraf: Önerilen Filmler (2/5 Oran) -->
+            <div class="preview-left-content">
+                <h1 id="showcaseTitle">Haftanın Öne Çıkanları (Sistem Önerisi)</h1>
+                <h3>Seçilen İçerikler:</h3>
+                <div id="movieGrid" class="movie-grid">
+                    <!-- JS İle Dynamic Kartlar Buraya Gelecek -->
+                </div>
+            </div>
+
+            <!-- Sağ Taraf: Şık Mor Hava Durumu Kartı (3/5 Oran) -->
+            <div id="triggerReason" class="weather-badge-container">
+                <!-- JS İle Üretilen Hava Durumu Kartı -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="js/showcase.js"></script>
+</body>
+</html>

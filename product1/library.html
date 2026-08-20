@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ä°Ã§erik YÃ¶netimi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/library.css">
+    <link rel="stylesheet" href="css/details.css">
+    <link rel="stylesheet" href="css/message.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">MovieAdmin</div>
+    <ul>
+        <li><a href="index.html">Dashboard</a></li>
+        <li class="active"><a href="library.html">İçerik Yönetimi</a></li>
+        <li><a href="movie-form.html">Yeni İçerik</a></li>
+        <li><a href="actors.html">Oyuncular</a></li>
+        <li><a href="statistics.html">İstatistikler</a></li>
+    </ul>
+    <ul style="margin-top: auto;">
+        <li><a href="#" id="logoutBtn">Ã‡Ä±kÄ±ÅŸ Yap</a></li>
+    </ul>
+</div>
+        <div class="main">
+          <header>
+            <div>
+              <h1>İçerik Yönetimi</h1>
+              <p class="subtitle">Veritabanındaki tüm içerikleri yönet.</p>
+            </div>
+          </header>
+          <div class="library-toolbar">
+            <input id="searchInput" type="text" placeholder="Başlığa göre ara...">
+            <select id="typeFilter">
+              <option value="all">Tüm Türler</option>
+              <option value="movie">Film</option>
+              <option value="series">Dizi</option>
+            </select>
+            <select id="sortFilter">
+              <option value="title">Başlığa göree</option>
+              <option value="rating">IMDb Puanı</option>
+              <option value="year">Yıl</option>
+            </select>
+          </div>
+          <div class="library-grid" id="libraryGrid"></div>
+          <div id="detailsModal" class="details-modal hidden">
+
+          </div>
+        </div>
+        <script src="js/auth-guard.js"></script>
+        <script src="js/library.js"></script>
+        <script src="js/language.js"></script>
+        <script src="js/message.js"></script>
+</body>
+</html>
+
+
+
+

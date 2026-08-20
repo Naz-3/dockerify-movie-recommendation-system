@@ -1,0 +1,417 @@
+.actor-search{
+    margin-bottom:30px;
+}
+.actor-search input{
+    width:100%;
+    height:56px;
+    background:var(--surface);
+    color:white;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:0 20px;
+    font-size:16px;
+    transition:.25s;
+}
+.actor-search input:focus{
+    outline:none;
+    border-color:var(--primary);
+    box-shadow:0 0 12px rgba(237,150,84,.25);
+}
+.actors-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:25px;
+}
+.actor-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+    overflow:hidden;
+    transition:.25s;
+}
+.actor-card:hover{
+    transform:translateY(-6px);
+    border-color:var(--primary);
+    box-shadow:0 15px 30px rgba(0,0,0,.35);
+}
+.actor-card img{
+    width:100%;
+    aspect-ratio:1/1;
+    object-fit:cover;
+}
+.actor-info{
+    padding:20px;
+}
+.actor-info h3{
+    margin-bottom:12px;
+    font-size:24px;
+    color: #fda3e5bd;
+    text-align: center;
+}
+.actor-info p{
+    color:var(--text2);
+    margin:6px 0;
+}
+
+.empty-actors{
+    grid-column:1/-1;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:60px;
+    text-align:center;
+}
+.empty-actors h2{
+    margin-bottom:12px;
+}
+.empty-actors p{
+    color:var(--text2);
+}
+
+@media(max-width:700px){
+    .actors-grid{
+        grid-template-columns:1fr;
+    }
+}
+.actor-card{
+    display:flex;
+    flex-direction:column;
+}
+.actor-avatar{
+    display:grid;
+    place-items:center;
+    width:76px;
+    height:76px;
+    margin:24px 20px 0;
+    border-radius:50%;
+    background:linear-gradient(135deg, #6f4fc3, #ed9654);
+    color:white;
+    font-size:24px;
+    font-weight:700;
+    box-shadow:0 8px 20px rgba(0,0,0,.25);
+}
+.actor-stats{
+    display:grid;
+    gap:7px;
+    padding:14px 0 18px;
+    border-bottom:1px solid var(--border);
+}
+.actor-stats p{
+    margin:0;
+}
+.actor-stats b{
+    color:var(--text);
+}
+.filmography{
+    padding-top:18px;
+}
+.filmography h4{
+    margin-bottom:12px;
+    font-size:16px;
+}
+.filmography ul{
+    padding-left:19px;
+    color:var(--text2);
+}
+.filmography li{
+    margin:8px 0;
+    line-height:1.35;
+}
+.filmography li::marker,
+.filmography span{
+    color:var(--primary);
+}
+
+.filmography-button{
+    width:100%;
+    margin-top:20px;
+    padding:12px;
+    border:0;
+    border-radius:10px;
+    background:var(--surface2);
+    color:var(--text);
+    cursor:pointer;
+    font-weight:700;
+    transition:.2s;
+}
+.filmography-button:hover{
+    background:var(--primary);
+    color:#111;
+}
+
+
+
+.actor-modal{
+    position:fixed;
+    inset:0;
+    z-index:1200;
+    display:grid;
+    place-items:center;
+    padding:20px;
+    background:rgba(0,0,0,.7);
+    backdrop-filter: blur(8px);
+    animation: fadeIn .25s ease;
+}
+@keyframes fadeIn{
+    from{opacity: 0;}
+    to{opacity: 1;}
+}
+.actor-filmography-modal{
+    width:min(560px, 100%);
+    max-height:calc(100vh - 40px);
+    overflow:auto;
+    border:1px solid var(--border);
+    border-radius:18px;
+    background:var(--surface);
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+}
+.actor-filmography-modal header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:26px 28px;
+    border-bottom:1px solid rgba(225,255,255,.06);
+    background: rgba(255,255,255,.02);
+}
+.actor-filmography-modal header p{
+    margin:0;
+    color:#98a5ba;
+    font-size:13px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+.actor-filmography-modal header h2{
+    margin:6px 0 0;
+    font-size:2rem;
+    color:#fff;
+}
+.filmography-close{
+    width:46px;
+    height:46px;
+    border:none;
+    border-radius:50%;
+    background:#2b3242;
+    color:#fff;
+    cursor:pointer;
+    font-size:26px;
+    transition: .25s;
+}
+.filmography-close:hover{
+    background: #394155;
+    transform: rotate(90deg);
+}
+.actor-filmography-modal ul{
+    list-style:none;
+    margin:0;
+    padding:26px 28px;
+    overflow: auto;
+    max-height: 280px;
+}
+.actor-filmography-modal li{
+    padding:14px 18px;
+    margin-bottom:12px;
+    border:none;
+    border-radius:14px;
+    background:#262d3a;
+    transition:.2s;
+}
+.actor-filmography-modal li span{
+    font-weight:600;
+}
+.actor-filmography-modal li strong{
+    color:var(--primary);
+}
+.actor-filmography-modal li small{
+    color:var(--text2);
+}
+.delete-warning.danger{
+    margin-top:0;
+    padding:14px 18px;
+    background:rgba(239,68,68,.12);
+    border:1px solid rgba(239,68,68,.25);
+    border-radius:12px;
+    color:#ff7070;
+    font-weight:600;
+}
+
+#deleteActorFilmography{
+    margin:0 28px;
+    padding:0;
+    max-height:220px;
+    overflow-y:auto;
+}
+
+#deleteActorFilmography li{
+    list-style:none;
+    margin-bottom:10px;
+}
+
+.delete-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:14px;
+    padding:26px 28px;
+    border-top:1px solid rgba(255,255,255,.06);
+}
+.edit-btn,
+.delete-btn{
+    min-width:145px;
+    height:48px;
+    border:none;
+    border-radius:12px;
+    font-weight:600;
+    font-size:.95rem;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.edit-btn{
+    background:#384154;
+    color:#fff;
+}
+
+.edit-btn:hover{
+    background:#495369;
+}
+
+.delete-btn{
+    background:linear-gradient(135deg,#ef4444,#dc2626);
+    color:#fff;
+}
+
+.delete-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 24px rgba(239,68,68,.35);
+}
+#editActorModal input{
+
+    width:100%;
+
+    padding:12px;
+
+    border-radius:8px;
+
+    border:none;
+
+    margin-top:20px;
+
+    font-size:16px;
+}
+
+#editActorModal button{
+
+    padding:10px 20px;
+
+    cursor:pointer;
+}
+
+
+.actor-actions{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.actor-actions button{
+    width: 100%;
+    height: 45px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .25s ease;
+}
+
+.primary-btn{
+    background: #baac5c;
+    color: #000000;
+}
+
+.primary-btn:hover{
+    background: #93863f;
+}
+
+.edit-btn{
+    background: #3b82f6;
+    color: #fff;
+}
+
+.edit-btn:hover{
+    background: #2563eb;
+}
+
+.delete-btn{
+    background: #ef4444;
+    color: #fff;
+}
+
+.delete-btn:hover{
+    background: #dc2626;
+}
+
+.delete-warning.danger{
+    color:#ef4444;
+    font-weight:600;
+}
+
+#deleteActorFilmography{
+    margin:15px 0;
+    padding-left:20px;
+    max-height:220px;
+    overflow-y:auto;
+}
+
+#deleteActorFilmography li{
+    margin-bottom:8px;
+}
+
+.delete-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:12px;
+    margin-top:25px;
+}
+.icon-btn{
+    background-color: rgb(133, 179, 181);
+    color:#000000;
+}
+.icon-btn:hover{
+    background-color: rgb(94, 127, 128);
+}
+.icon-btn.danger{
+    background-color: rgb(174, 118, 118);
+    color: #000000;
+}
+.icon-btn.danger:hover{
+    background-color: rgb(152, 82, 82);
+}
+
+#deleteActorMessage{
+    margin-bottom:18px;
+    line-height:1.6;
+    color:var(--text);
+    font-size:15px;
+}
+
+#deleteActorMovies{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.delete-movie-item{
+    padding:12px 14px;
+    background:var(--surface2);
+    border-radius:10px;
+    border:1px solid var(--border);
+    color:var(--text2);
+}
+
+.delete-warning{
+    margin-top:12px;
+    color:#ffb74d;
+    font-size:14px;
+}

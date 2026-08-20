@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İçerik Ara - MovieApp</title>
+    <link rel="stylesheet" href="css/user-panel.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">MovieAdmin</div>
+        <ul>
+            <li class="active"><a href="search.html">İçerik Ara / Ekle</a></li>
+            <li><a href="latest.html">Kütüphane</a></li>
+            <li><a href="favorites.html">Favorilerim</a></li>
+            <li><a href="watchlist.html">Daha Sonra İzle</a></li>
+            <li><a href="showcase.html">Daily (AI)</a></li>
+        </ul>
+
+        <ul style="margin-top: auto;">
+            <li><a href="#" id="logoutBtn" onclick="logout()">Çıkış Yap</a></li>
+        </ul>
+    </div>
+
+    <main class="main-content-area">
+        <div class="section-header">
+            <h2>🔍 İçerik Ara & Kütüphanene Ekle</h2>
+            <p>Veritabanındaki filmleri arayın veya izleme listenize ekleyin.</p>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Film, dizi veya tür adı yazın...">
+            <button id="searchBtn" class="btn-primary">Ara</button>
+        </div>
+
+        <div id="searchResultsGrid" class="media-grid"></div>
+    </main>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="js/user-panel.js"></script>
+</body>
+</html>

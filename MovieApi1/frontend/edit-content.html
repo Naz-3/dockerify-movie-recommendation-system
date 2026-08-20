@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İçerik Düzenle</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/edit.css">
+    <link rel="stylesheet" href="css/message.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">🎬 MovieAdmin</div>
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="library.html">İçerik Yönetimi</a></li>
+        <li><a href="movie-form.html">Yeni İçerik</a></li>
+        <li><a href="actors.html">Oyuncular</a></li>
+        <li><a href="statistics.html">İstatistikler</a></li>
+        <ul style="margin-top: auto;">
+        <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+    </ul>
+    </div>
+    <div class="main">
+        <header>
+            <div>
+                <h1>İçerik Düzenle</h1>
+                <p class="subtitle">Veritabanındaki bilgileri güncelle.</p>
+            </div>
+        </header>
+        <div class="edit-wrapper">
+            <div class="poster-panel">
+                <img id="posterPreview" src="https://placehold.co/300x450?text=Poster">
+                <button class="updateBtn" onclick="refreshOmdb()">OMDb'den Güncelle</button>
+                </div>
+                <div class="edit-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Başlık</label>
+                            <input id="title">
+                        </div>
+                        <div class="form-group">
+                            <label>Yıl</label>
+                            <input id="year">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tür</label>
+                            <input id="genre">
+                        </div>
+                        <div class="form-group">
+                            <label>İçerik Tipi</label>
+                            <select id="type">
+                                <option value="movie">Film</option>
+                                <option value="series">Dizi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>IMDb Puanı</label>
+                            <input id="rating">
+                        </div>
+                        <div class="form-group">
+                            <label>Süre</label>
+                            <input id="runtime">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Yönetmen</label>
+                        <input id="director">
+                    </div>
+                    <div class="form-group">
+                        <label>Yazar</label>
+                        <input id="writer">
+                    </div>
+                    <div class="form-group">
+                        <label>Yapımcı</label>
+                        <input id="producer">
+                    </div>
+                    <div class="form-group">
+                        <label>Başrol Oyuncuları</label>
+                        <textarea id="actors" readonly></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ülke</label>
+                            <input id="country">
+                        </div>
+                        <div class="form-group">
+                            <label>Dil</label>
+                            <input id="language">
+                        </div>
+                    </div>
+                        <div class="form-group">
+                            <label>Ödüller</label>
+                            <textarea id="awards" rows="2"></textarea>
+                        </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <textarea id="plot"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Poster URL</label>
+                        <input id="poster">
+                    </div>
+                    <button class="saveButton" onclick="saveMovie()">Kaydet</button>
+                </div>
+            </div>
+        </div>
+        <script src="js/auth-guard.js"></script>
+        <script src="edit-content.js"></script>
+        <script src="language.js"></script>
+        <script src="js/message.js"></script>
+</body>
+</html>

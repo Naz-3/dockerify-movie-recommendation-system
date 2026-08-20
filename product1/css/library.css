@@ -1,0 +1,180 @@
+.library-actions{
+    display:flex;
+    gap:10px;
+    margin-top:auto;
+    padding-top:20px;
+}
+.library-actions button{
+    flex:1;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    font-weight:600;
+    color:white;
+    cursor:pointer;
+    transition:.25s;
+}
+.library-actions .edit{
+    background:#14306c;
+}
+.library-actions .sync{
+    background:#efc46e;
+    color:black;
+}
+.library-actions .delete{
+    background:#541a1a;
+}
+.library-actions button:hover{
+    transform:translateY(-2px);
+    filter:brightness(1.08);
+}
+@keyframes spin{
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+.library-toolbar{
+    display:flex;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:30px;
+}
+
+.library-toolbar input{
+    flex:1;
+    min-width:280px;
+    height:50px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:white;
+    border-radius:12px;
+    padding:0 16px;
+    font-size:15px;
+}
+
+.library-toolbar input:focus{
+    outline:none;
+    border-color:var(--primary);
+    box-shadow:0 0 15px rgba(255,140,0,.25);
+}
+
+.library-toolbar select{
+    width:180px;
+    height:50px;
+    background:var(--surface);
+    color:white;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:0 12px;
+    cursor:pointer;
+}
+
+.library-toolbar select:focus{
+    outline:none;
+    border-color:var(--primary);
+}
+
+.library-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+    gap:20px;
+    align-items:start;
+}
+
+.library-card{
+    display:flex;
+    flex-direction:column;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+    overflow:hidden;
+    transition:.25s;
+    height:100%;
+}
+
+.library-card:hover{
+    transform:translateY(-8px);
+    border-color:var(--primary);
+    box-shadow:0 18px 35px rgba(0,0,0,.35);
+}
+
+.library-card img{
+    width:100%;
+    aspect-ratio:2/3;
+    object-fit:cover;
+    display:block;
+    background: #ddd;
+}
+
+.library-info{
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    padding:20px;
+}
+.library-info h3{
+    font-size:22px;
+    margin-bottom:14px;
+    color:white;
+}
+.library-info p{
+    color:var(--text2);
+    margin:7px 0;
+    line-height:1.5;
+}
+
+/* Ana kapsayıcıyı flex yapıp dikey diziyoruz */
+.library-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+}
+
+/* Action row içindeki düzeni kırıp alt satıra 2 buton olarak diziyoruz */
+.action-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+}
+
+/* Detayları Gör butonunu üstte %100 genişlik yapıyoruz */
+.action-row .details-btn {
+    width: 100% !important;
+    flex: 1 1 100% !important; /* Tüm satırı kapla */
+}
+
+/* Senkronize ve Sil butonlarını alt satırda eşit paylaştırıyoruz */
+.action-row .sync,
+.action-row .delete {
+    flex: 1 1 calc(50% - 4px) !important; /* Yarı yarıya paylaş */
+}
+
+.edit{
+    background:#1f4fa5;
+    color:#fff;
+}
+
+.sync{
+    background:#f5c85b;
+    color:#111;
+}
+
+.delete{
+    background:#7b2424;
+    color:#fff;
+}
+
+.edit:hover{
+    background:#2b64cf;
+}
+
+.sync:hover{
+    background:#ffd770;
+}
+
+.delete:hover{
+    background:#9b3030;
+}

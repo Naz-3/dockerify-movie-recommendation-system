@@ -1,0 +1,89 @@
+.edit-wrapper > div{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.edit-wrapper input,
+.edit-wrapper textarea{
+    width: 100%;
+    display: block;
+    box-sizing: border-box;
+}
+
+#customTitle{
+    font-size: 30px;
+    font-weight: bold;
+    text-align: center;
+}
+#customYear,
+#customType,
+#customPlot{
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+
+/* Üst Seçim Kontrol Barı */
+.bulk-action-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1f2937;
+    border: 1px solid #374151;
+    padding: 12px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    color: #f3f4f6;
+}
+
+.select-all-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.select-all-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #10b981;
+    cursor: pointer;
+}
+
+/* Kart Checkbox Kutusu */
+.search-card {
+    position: relative;
+}
+
+.card-checkbox-wrapper {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.movie-select-cb {
+    width: 20px;
+    height: 20px;
+    accent-color: #10b981;
+    cursor: pointer;
+}
+
+/* Devre dışı kalmış aktarım butonu stili */
+#btnBulkImport:disabled {
+    background-color: #4b5563;
+    opacity: 0.6;
+    cursor: not-allowed;
+}

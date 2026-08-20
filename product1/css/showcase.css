@@ -1,0 +1,302 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ==========================================
+   SHOWCASE KAPSAYICI & SAYFA YAPISI
+   ========================================== */
+.showcase-container {
+    flex: 1;
+    margin-left: 260px !important;
+    padding: 40px 48px;
+    max-width: 1400px;
+    color: #f3f4f6;
+    font-family: 'Inter', system-ui, sans-serif;
+    box-sizing: border-box;
+}
+
+.showcase-container h2 {
+    font-family: 'Sora', 'Inter', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    background: linear-gradient(120deg, #ffffff 0%, #c7d2fe 60%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
+
+.showcase-container .header-section > p {
+    color: #8b93a3;
+    font-size: 14.5px;
+    line-height: 1.6;
+    max-width: 780px;
+    margin-bottom: 24px;
+}
+
+/* ==========================================
+   AI KONTROL PANELİ
+   ========================================== */
+.filter-panel {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px;
+    align-items: center;
+    background: linear-gradient(180deg, #1a1f2c 0%, #151a24 100%);
+    padding: 20px 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.55);
+    margin-bottom: 28px;
+}
+
+.user-profile-badge {
+    background-color: #0f131b;
+    border: 1px solid #33394a;
+    padding: 10px 16px;
+    border-radius: 10px;
+    color: #9ca3af;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.user-profile-badge .label {
+    text-transform: uppercase;
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.user-profile-badge strong {
+    color: #818cf8;
+    font-size: 14px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.input-group label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.input-group input {
+    padding: 12px 16px;
+    border: 1px solid #33394a;
+    background-color: #0f131b;
+    color: #ffffff;
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.input-group input:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.btn-generate {
+    padding: 13px 24px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 55%, #4338ca 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    height: 48px;
+    box-shadow: 0 6px 16px -4px rgba(79, 70, 229, 0.55);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-generate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.6);
+}
+
+/* ==========================================
+   YÜKLENİYOR DURUMU
+   ========================================== */
+#loading {
+    padding: 18px 22px;
+    margin-bottom: 26px;
+    background: #1a1f2c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    color: #b4bbc9;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ==========================================
+   BEYAZ VİTRİN ÖNİZLEME KARTI
+   ========================================== */
+.preview-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 24px 48px -18px rgba(15, 15, 35, 0.35);
+    color: #111827;
+    
+    /* Sol taraf esnek film alanı, sağ taraf sabitleşmiş dikey kart */
+    display: flex;
+    gap: 36px;
+    align-items: flex-start;
+}
+
+.preview-left-content {
+    flex: 1;
+}
+
+#showcaseTitle {
+    font-family: 'Sora', 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 12px 0;
+}
+
+.preview-left-content > h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+}
+
+/* Film Grid */
+.movie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.movie-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.movie-card:hover {
+    transform: translateY(-4px);
+    border-color: #818cf8;
+}
+
+/* ==========================================
+   SAĞ HAVA DURUMU KARTI (DİKEY 3:5 POSTER ORANI)
+   ========================================== */
+.weather-badge-container {
+    width: 300px;
+    aspect-ratio: 3 / 5; /* Tam olarak Dikey 3:5 Dikdörtgen Oranı */
+    flex-shrink: 0;
+}
+
+/* JS Tarafından Üretilen İçi Dikey Kart */
+.weather-card-inline {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 32px 20px;
+    border-radius: 20px;
+    text-align: center;
+    background: radial-gradient(120% 90% at 20% 10%, rgba(255, 255, 255, 0.25), transparent 60%),
+                linear-gradient(160deg, #1e1b4b 0%, #3730a3 40%, #4f46e5 75%, #6366f1 100%);
+    color: #ffffff;
+    box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.weather-card-inline .weather-icon {
+    font-size: 64px;
+    line-height: 1;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));
+}
+
+.weather-card-inline .city-badge {
+    font-family: 'Sora', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+}
+
+.weather-card-inline .temp-badge {
+    font-family: 'Sora', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.18);
+    padding: 8px 24px;
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.weather-card-inline .weather-detail {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #e0e7ff;
+}
+
+.weather-card-inline .humidity-badge {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c7d2fe;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 6px 14px;
+    border-radius: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+@media (max-width: 1024px) {
+    .preview-card {
+        flex-direction: column-reverse;
+        align-items: center;
+    }
+    
+    .weather-badge-container {
+        width: 100%;
+        max-width: 320px;
+    }
+}
+
+@media (max-width: 900px) {
+    .showcase-container {
+        margin-left: 0 !important;
+        width: 100%;
+        padding: 24px 18px 40px;
+    }
+
+    .filter-panel {
+        grid-template-columns: 1fr;
+    }
+}

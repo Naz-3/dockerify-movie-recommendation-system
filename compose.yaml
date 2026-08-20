@@ -1,0 +1,59 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./MovieApi1
+    ports:
+      - "8080"
+    environment:
+      DB_URL: ${PRODUCTION_DB_URL}
+      DB_PASSWORD: ${PRODUCTION_DB_PASSWORD}
+      DB_USERNAME: ${PRODUCTION_DB_USER}
+      OMDB_API_KEY: ${OMDB_API_KEY}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    networks:
+      - master
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./product1
+    ports:
+      - "80:80"
+    networks:
+      - master
+    restart: unless-stopped
+
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PRODUCTION_DB_USER}
+      POSTGRES_PASSWORD: ${PRODUCTION_DB_PASSWORD}
+      POSTGRES_DB: pgdb
+    expose:
+      - "5432"
+    volumes:
+      - pg:/var/lib/postgresql/data
+    networks:
+      - master
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U pgusr -d pgdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg:
+
+networks:
+  master:
+    driver: bridge

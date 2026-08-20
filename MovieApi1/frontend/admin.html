@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieApp - Admin Paneli</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/showcase.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <script src="js/auth-guard.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sol Menü (Sidebar) -->
+        <aside class="sidebar">
+            <h1 class="logo">MovieApp <span style="font-size: 0.8rem; color: #ff4757;">[ADMIN]</span></h1>
+            <nav class="nav-menu">
+                <ul>
+                    <li><a href="admin.html" class="active">🛡️ Admin Paneli</a></li>
+                    <li><a href="index.html">Dashboard</a></li>
+                    <li><a href="movie-form.html">Yeni İçerik</a></li>
+                    <li><a href="showcase.html">Daily Vitrin</a></li>
+                    <li><a href="library.html">İçerik Yönetimi</a></li>
+                    <li><a href="actors.html">Oyuncular</a></li>
+                    <li><a href="statistics.html">İstatistikler</a></li>      
+                </ul>
+            </nav>
+            <div class="sidebar-user-section" style="margin-top: auto; padding: 15px;">
+                <div id="userProfileBar">
+                    <span id="welcomeUserText" style="color: #fff; font-weight: bold;">👤 Admin</span>
+                    <button onclick="logout()" style="background: #e50914; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">Çıkış Yap</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Ana İçerik Alanı -->
+        <main class="main-content">
+            <div class="admin-dashboard-wrapper">
+                <h2>Admin Kontrol Merkezi</h2>
+                <p>Sistemdeki kullanıcıları yönetin, rol atayın ve genel içerik durumunu kontrol edin.</p>
+                <br>
+
+                <!-- İstatistik / Özet Kartları -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <h4>Toplam Kullanıcı</h4>
+                        <p id="totalUsersCount">--</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Sistem Durumu</h4>
+                        <p style="color: #2ed573;">Aktif 🟢</p>
+                    </div>
+                </div>
+
+                <!-- Kullanıcı Yönetimi Tablosu -->
+                <h3>👥 Kullanıcı Yönetimi</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Kullanıcı Adı</th>
+                                <th>E-Posta</th>
+                                <th>Rol</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #aaa;">Kullanıcılar yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

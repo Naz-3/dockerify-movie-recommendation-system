@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İçerik Detayları</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/details.css">
+    <link rel="stylesheet" href="css/message.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo">🎬 MovieAdmin</div>
+
+    <ul>
+        <li>
+            <a href="index.html">🏠 Dashboard</a>
+        </li>
+        <li class="active">
+            <a href="library.html">🎞 İçerik Yönetimi</a>
+        </li>
+        <li>
+            <a href="movie-form.html">➕ Yeni İçerik</a>
+        </li>
+        <li>
+            <a href="actors.html">🎭 Oyuncular</a>
+        </li>
+        <li>
+            <a href="statistics.html">📊 İstatistikler</a>
+        </li>
+        <li>
+            <a href="showcase.html">🌎 Daily</a>
+        </li>
+    </ul>
+    <ul style="margin-top: auto;">
+        <li><a href="#" id="logoutBtn">Çıkış Yap</a></li>
+    </ul>
+</div>
+
+<div class="main">
+
+    <header>
+        <h1>İçerik Detayları</h1>
+    </header>
+
+    <div class="details-wrapper">
+
+    <div class="poster-panel">
+        <img id="poster" src="https://placehold.co/300x450?text=Poster">
+    </div>
+
+    <div class="details-panel">
+
+        <div class="detail-group">
+            <label>Başlık</label>
+            <p id="title">-</p>
+        </div>
+
+        <div class="detail-row">
+
+            <div class="detail-group">
+                <label>Yıl</label>
+                <p id="year">-</p>
+            </div>
+
+            <div class="detail-group">
+                <label>IMDb Puanı</label>
+                <p id="rating">-</p>
+            </div>
+
+        </div>
+
+        <div class="detail-row">
+
+            <div class="detail-group">
+                <label>Tür</label>
+                <p id="genre">-</p>
+            </div>
+
+            <div class="detail-group">
+                <label>Süre</label>
+                <p id="runtime">-</p>
+            </div>
+
+        </div>
+
+        <div class="detail-group">
+            <label>Yönetmen</label>
+            <p id="director">-</p>
+        </div>
+
+        <div class="detail-group">
+            <label>Yazar</label>
+            <p id="writer">-</p>
+        </div>
+
+        <div class="detail-group">
+            <label>Oyuncular</label>
+            <p id="actors">-</p>
+        </div>
+
+        <div class="detail-row">
+
+            <div class="detail-group">
+                <label>Ülke</label>
+                <p id="country">-</p>
+            </div>
+
+            <div class="detail-group">
+                <label>Dil</label>
+                <p id="language">-</p>
+            </div>
+
+        </div>
+
+        <div class="detail-group">
+            <label>Ödüller</label>
+            <p id="awards">-</p>
+        </div>
+
+        <div class="detail-group">
+            <label>Açıklama</label>
+            <p id="plot">-</p>
+        </div>
+
+            <!-- İzleme İlerleme Çubuğu Bileşeni (Yeni Eklendi) -->
+            <div class="watch-progress-wrapper" style="margin-top: 25px; background: rgba(255, 255, 255, 0.03); padding: 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 14px; font-weight: 600; color: #e2e8f0;">İzleme İlerlemesi</span>
+                    <span id="progressText" style="font-size: 13px; color: #e50914; font-weight: 600;">0 / 0 dk (%0)</span>
+                </div>
+                <div style="width: 100%; background-color: #1a202c; border-radius: 20px; height: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                    <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #e50914, #ff5252); border-radius: 20px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                </div>
+            </div>
+
+            <!-- Kullanıcı Etkileşim Butonları (Güncellendi) -->
+            <div class="user-action-section" style="margin-top: 15px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 10px;">
+                    <button id="likeBtn" class="btn btn-success" style="padding: 10px 20px; cursor: pointer; border-radius: 6px;">👍 Beğen</button>
+                    <button id="dislikeBtn" class="btn btn-danger" style="padding: 10px 20px; cursor: pointer; border-radius: 6px;">👎 Beğenme</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #a0aec0; font-size: 13px;">Simülasyon:</span>
+                    <button onclick="addWatchMinutes(15)" style="padding: 8px 14px; cursor: pointer; background: #2d3748; color: #fff; border: 1px solid #4a5568; border-radius: 6px; font-size: 13px;">+15 Dk</button>
+                    <button onclick="addWatchMinutes(60)" style="padding: 8px 14px; cursor: pointer; background: #2d3748; color: #fff; border: 1px solid #4a5568; border-radius: 6px; font-size: 13px;">+60 Dk</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <section class="season-section">
+        <h2>Sezonlar</h2>
+        <div id="seasonList"></div>
+    </section>
+</div>
+
+<div id="episodeModal" class="episode-modal hidden">
+    <div class="episode-modal-content">
+        <span class="close-modal" onclick="closeEpisodeModal()">
+            &times;
+        </span>
+        <h2>Bölümü Düzenle</h2>
+        <img
+                id="modalPosterPreview"
+                src="https://placehold.co/250x360?text=Poster">
+
+        <div class="modal-group">
+            <label>Poster URL</label>
+            <input
+                    type="text"
+                    id="modalPoster">
+        </div>
+        <div class="modal-group">
+            <label>Özet</label>
+            <textarea
+                    id="modalPlot"
+                    rows="8"></textarea>
+
+        </div>
+        <div class="modal-buttons">
+
+            <button
+                    class="save-btn"
+                    onclick="saveEpisode()">
+                Kaydet
+
+            </button>
+            <button
+                    class="sync-btn"
+                    onclick="syncEpisode()">
+                OMDb ile Senkronize
+            </button>
+        </div>
+    </div>
+</div>
+<script src="js/auth-guard.js"></script>
+<script src="details.js"></script>
+<script src="js/message.js"></script>
+
+</body>
+</html>
