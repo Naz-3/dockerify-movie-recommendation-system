@@ -23,6 +23,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
+    // Swagger UI, Dokümantasyon ve Auth endpoint'lerinde JWT filtresini devre dışı bırakır
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return path.startsWith("/swagger-ui") 
+            || path.startsWith("/v3/api-docs") 
+            || path.startsWith("/swagger-resources")
+            || path.startsWith("/webjars")
+            || path.startsWith("/api/auth");
+    }
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
