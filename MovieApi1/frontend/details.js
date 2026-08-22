@@ -1,7 +1,7 @@
-const API = "http://backend:8080/api/content";
-const EPISODE_API = "http://backend:8080/api/episodes";
-const WATCH_HISTORY_API = "http://backend:8080/api/user-activity/track";
-const USER_ACTIVITY_API = "http://backend:8080/api/user-activity"; // Son durumu çekmek için
+const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
+const EPISODE_API = "https://dockerify-movie-recommendation-system.onrender.com/api/episodes";
+const WATCH_HISTORY_API = "https://dockerify-movie-recommendation-system.onrender.com/api/user-activity/track";
+const USER_ACTIVITY_API = "https://dockerify-movie-recommendation-system.onrender.com/api/user-activity"; // Son durumu çekmek için
 
 let editingEpisodeId = null;
 let openedSeason = null;

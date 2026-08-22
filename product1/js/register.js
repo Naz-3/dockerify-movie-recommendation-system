@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const response = await fetch("http://backend:8080/api/auth/register", {
+            const response = await fetch("https://dockerify-movie-recommendation-system.onrender.com/api/auth/register", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

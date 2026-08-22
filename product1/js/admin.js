@@ -1,6 +1,6 @@
-const API = "http://backend:8080/api/content";
-const ACTOR_API = "http://backend:8080/api/actors";
-const USER_API = "http://backend:8080/api/users"; // Kullanıcı API adresi
+const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
+const ACTOR_API = "https://dockerify-movie-recommendation-system.onrender.com/api/actors";
+const USER_API = "https://dockerify-movie-recommendation-system.onrender.com/api/users"; // Kullanıcı API adresi
 
 // Sayfa yüklenmeden önce Admin yetkisi kontrolü
 checkAdminAuth();
@@ -64,7 +64,7 @@ async function loadUsers() {
     const token = localStorage.getItem("jwtToken") || localStorage.getItem("token");
 
     try {
-        const response = await fetch("http://backend:8080/api/users", {
+        const response = await fetch("https://dockerify-movie-recommendation-system.onrender.com/api/users", {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",

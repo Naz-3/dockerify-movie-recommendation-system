@@ -1,4 +1,4 @@
-const API = "http://backend:8080/api/actors";
+const API = "https://dockerify-movie-recommendation-system.onrender.com/api/actors";
 
 let editingActorId = null;
 let deletingActorId = null;

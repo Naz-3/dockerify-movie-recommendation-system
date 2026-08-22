@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             // login.js içindeki fetch kısmı
-            const response = await fetch("http://backend:8080/api/auth/login", {
+            const response = await fetch("https://dockerify-movie-recommendation-system.onrender.com/api/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

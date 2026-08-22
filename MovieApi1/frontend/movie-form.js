@@ -1,5 +1,5 @@
 // 1. API Sabitleri ve Değişkenler
-const API = "http://backend:8080/api/content";
+const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 
 const searchBox = document.getElementById("searchBox");
 const results = document.getElementById("searchResults");

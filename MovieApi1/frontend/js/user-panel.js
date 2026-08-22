@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    const BASE_URL = "http://backend:8080/api/content";
+    const BASE_URL = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 
     function getAuthHeaders() {
         const token = localStorage.getItem("jwtToken");

@@ -1,4 +1,4 @@
-const API = "http://backend:8080/api/content";
+const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 
 const token = localStorage.getItem("jwtToken");
 const role = localStorage.getItem("userRole");

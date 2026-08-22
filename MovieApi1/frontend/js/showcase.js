@@ -1,5 +1,5 @@
-const BASE_URL = 'http://backend:8080/api/v1/showcases';
-const USERS_URL = 'http://backend:8080/api/users';
+const BASE_URL = 'https://dockerify-movie-recommendation-system.onrender.com/api/v1/showcases';
+const USERS_URL = 'https://dockerify-movie-recommendation-system.onrender.com/api/users';
 let currentShowcaseId = null;
 
 // Popüler Türkiye & Dünya Şehirleri Listesi

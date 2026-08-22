@@ -1,5 +1,5 @@
 // 1. API ve Yetki Kontrolleri
-const API = "http://backend:8080/api/content";
+const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 
 let genreChart;
 let currentContents = [];
