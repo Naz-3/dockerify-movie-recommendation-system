@@ -184,21 +184,24 @@ async function renderEpisodes() {
         seasonItem.appendChild(headerDiv);
 
         if (isOpened) {
-            // Fragman/Videoları Çek ve Ekle
+            // Fragman/Videoları Çek ve Görsel Kapaklı Kartlar Olarak Ekle
             const videos = await fetchSeasonVideos(seasonNumber);
             if (videos && videos.length > 0) {
                 const videoWrapper = document.createElement("div");
                 videoWrapper.className = "season-videos-wrapper";
                 
                 const videoCardsHtml = videos.slice(0, 4).map(v => `
-                    <div class="video-card">
-                        <div>
-                            <div class="video-card-title">${v.name}</div>
-                            <div class="video-card-type">${v.type || 'Video'} • ${v.site || 'YouTube'}</div>
+                    <div class="video-card" onclick="openVideoModal('${v.key}', '${v.name.replace(/'/g, "\\'")}')">
+                        <div class="video-thumbnail-container">
+                            <img class="video-thumbnail" src="https://img.youtube.com/vi/${v.key}/hqdefault.jpg" alt="${v.name}">
+                            <div class="play-overlay">
+                                <div class="play-icon-circle">▶</div>
+                            </div>
                         </div>
-                        <button class="watch-video-btn" onclick="openVideoModal('${v.key}', '${v.name.replace(/'/g, "\\'")}')">
-                            ▶ İzle
-                        </button>
+                        <div class="video-card-body">
+                            <div class="video-card-title" title="${v.name}">${v.name}</div>
+                            <span class="video-card-badge">${v.type || 'Fragman'}</span>
+                        </div>
                     </div>
                 `).join("");
 
