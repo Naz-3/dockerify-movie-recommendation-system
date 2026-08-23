@@ -6,7 +6,7 @@ const USER_ACTIVITY_API = "https://dockerify-movie-recommendation-system.onrende
 let editingEpisodeId = null;
 let openedSeason = null;
 let allEpisodes = [];
-let currentSeasonVideos = {}; // Sezon videolarını önbelleğe almak için
+let currentSeasonVideos = {};
 
 let currentWatchedMinutes = 0;
 let totalMovieRuntimeMinutes = 0;
@@ -89,14 +89,11 @@ async function loadMovie() {
 
         if (movie.type === "series") {
             allEpisodes = movie.episodes ?? [];
-            renderEpisodes();
+            await renderEpisodes();
         }
 
     } catch (error) {
-        console.error(error);
-        if (typeof showMessage === "function") {
-            await showMessage("error", "Sunucu Hatası", "Sunucuya ulaşılamadı.");
-        }
+        console.error("Movie yükleme hatası:", error);
     }
 }
 
@@ -132,7 +129,6 @@ function fillDetails(movie) {
     }
 }
 
-// TMDB Sezon Videolarını Backend API'den çeken fonksiyon
 async function fetchSeasonVideos(seasonNumber) {
     if (currentSeasonVideos[seasonNumber]) {
         return currentSeasonVideos[seasonNumber];
@@ -150,7 +146,7 @@ async function fetchSeasonVideos(seasonNumber) {
             return videos;
         }
     } catch (error) {
-        console.error("Sezon videoları yüklenirken hata oluştu:", error);
+        console.error("Sezon videoları alınamadı:", error);
     }
     return [];
 }
@@ -158,6 +154,7 @@ async function fetchSeasonVideos(seasonNumber) {
 async function renderEpisodes() {
     if (!seasonList) return;
     seasonList.innerHTML = "";
+    
     const grouped = {};
     allEpisodes.forEach(ep => {
         if (!grouped[ep.seasonNumber]) {
@@ -172,32 +169,32 @@ async function renderEpisodes() {
         
         const isOpened = openedSeason == seasonNumber;
         
-        seasonItem.innerHTML = `
-            <div class="season-header">
-                <span>
-                    ${isOpened ? "▼" : "▶"} Season ${seasonNumber}
-                </span>
-                <span>${grouped[seasonNumber].length} Bölüm</span>
-            </div>
+        const headerDiv = document.createElement("div");
+        headerDiv.className = "season-header";
+        headerDiv.innerHTML = `
+            <span>${isOpened ? "▼" : "▶"} Season ${seasonNumber}</span>
+            <span>${grouped[seasonNumber].length} Bölüm</span>
         `;
         
-        seasonItem.querySelector(".season-header").onclick = async () => {
+        headerDiv.onclick = async () => {
             openedSeason = (openedSeason == seasonNumber) ? null : seasonNumber;
             await renderEpisodes();
         };
 
+        seasonItem.appendChild(headerDiv);
+
         if (isOpened) {
-            // Sezon Fragman ve Videolar Alanı
+            // Fragman/Videoları Çek ve Ekle
             const videos = await fetchSeasonVideos(seasonNumber);
             if (videos && videos.length > 0) {
                 const videoWrapper = document.createElement("div");
                 videoWrapper.className = "season-videos-wrapper";
                 
-                let videoCardsHtml = videos.slice(0, 4).map(v => `
+                const videoCardsHtml = videos.slice(0, 4).map(v => `
                     <div class="video-card">
                         <div>
                             <div class="video-card-title">${v.name}</div>
-                            <div class="video-card-type">${v.type} • ${v.site}</div>
+                            <div class="video-card-type">${v.type || 'Video'} • ${v.site || 'YouTube'}</div>
                         </div>
                         <button class="watch-video-btn" onclick="openVideoModal('${v.key}', '${v.name.replace(/'/g, "\\'")}')">
                             ▶ İzle
@@ -212,7 +209,7 @@ async function renderEpisodes() {
                 seasonItem.appendChild(videoWrapper);
             }
 
-            // Bölümler Listesi
+            // Bölüm Listesi
             const episodeList = document.createElement("div");
             episodeList.className = "episode-list";
             grouped[seasonNumber].forEach(ep => {
@@ -239,15 +236,14 @@ async function renderEpisodes() {
     }
 }
 
-// Video Modal Fonksiyonları
-function openVideoModal(key, title) {
+function openVideoModal(key, videoTitle) {
     const videoModal = document.getElementById("videoModal");
     const videoIframe = document.getElementById("videoIframe");
     const videoModalTitle = document.getElementById("videoModalTitle");
 
     if (videoModal && videoIframe) {
         videoIframe.src = `https://www.youtube.com/embed/${key}?autoplay=1`;
-        if (videoModalTitle) videoModalTitle.textContent = title;
+        if (videoModalTitle) videoModalTitle.textContent = videoTitle;
         videoModal.classList.remove("hidden");
     }
 }
