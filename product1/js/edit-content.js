@@ -5,7 +5,7 @@ const role = localStorage.getItem("userRole");
 
 if (!token || role !== "ADMIN") {
     alert("Bu sayfaya erişim yetkiniz yok!");
-    window.location.href = "showcase.html"; // Admin değilse vitrine geri at
+    window.location.href = "showcase.html";
 }
 
 const params = new URLSearchParams(window.location.search);
@@ -29,41 +29,36 @@ const poster = document.getElementById("poster");
 const posterPreview = document.getElementById("posterPreview");
 
 window.onload = () => {
+    if (!id) {
+        showMessage("error", "Hata", "İçerik Kimliği (ID) bulunamadı.");
+        return;
+    }
     loadMovie();
 };
 
-// JWT Token alma yardımcı fonksiyonu
 function getAuthHeaders() {
-    const token = localStorage.getItem("jwtToken");
+    const jwtToken = localStorage.getItem("jwtToken");
     return {
         "Content-Type": "application/json",
-        "Authorization": token ? `Bearer ${token}` : ""
+        "Authorization": jwtToken ? `Bearer ${jwtToken}` : ""
     };
-}
-
-// Oturum Koruma (Auth Guard) - Token yoksa login sayfasına yönlendirir
-function checkAuthGuard() {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) {
-        window.location.href = "login.html";
-    }
 }
 
 async function loadMovie() {
     try {
-        console.log("ID:", id);
+        const response = await fetch(`${API}/${id}`, {
+            method: "GET",
+            headers: getAuthHeaders()
+        });
 
-        const response = await fetch(`${API}/${id}`);
-        console.log("Status:", response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP Hata koda: ${response.status}`);
+        }
 
         const movie = await response.json();
-        console.log(movie);
-
         fillForm(movie);
-    }
-
-    catch (error) {
-        console.error(error);
+    } catch (error) {
+        console.error("Yükleme Hatası:", error);
         await showMessage(
             "error",
             "Yükleme Başarısız",
@@ -73,50 +68,49 @@ async function loadMovie() {
 }
 
 function fillForm(movie) {
-
     title.value = movie.title ?? "";
     year.value = movie.year ?? "";
     genre.value = movie.genre ?? "";
     type.value = movie.type ?? "movie";
     rating.value = movie.rating ?? "";
     runtime.value = movie.runtime ?? "";
-    director.value = movie.director ?? "";
-    writer.value = movie.writer ?? "";
-    producer.value = movie.producer ?? "";
-    country.value = movie.country ?? "";
-    language.value = movie.language ?? "";
-    awards.value = movie.awards ?? "";
-    actors.value = Array.isArray(movie.actors)
-        ? movie.actors.map(actor => actor.name).join(", ")
-        : (movie.actors ?? "");
-
-    plot.value = movie.plot ?? "";
-    poster.value = movie.Poster ?? "";
-    producer.value = movie.producer && movie.producer !== "N/A"
-        ? movie.producer
-        : "";
+    
+    director.value = movie.director === "N/A" ? "" : (movie.director ?? "");
     writer.value = movie.writer === "N/A" ? "" : (movie.writer ?? "");
+    producer.value = (movie.producer && movie.producer !== "N/A") ? movie.producer : "";
     country.value = movie.country === "N/A" ? "" : (movie.country ?? "");
     language.value = movie.language === "N/A" ? "" : (movie.language ?? "");
     awards.value = movie.awards === "N/A" ? "" : (movie.awards ?? "");
-    director.value = movie.director === "N/A" ? "" : (movie.director ?? "");
 
-    posterPreview.src =
-        movie.Poster ||
-        "https://placehold.co/300x450?text=Poster";
+    actors.value = Array.isArray(movie.actors)
+        ? movie.actors.map(actor => typeof actor === 'object' ? actor.name : actor).join(", ")
+        : (movie.actors ?? "");
 
+    plot.value = movie.plot ?? "";
+    
+    // Poster verisini hem 'poster' hem 'Poster' ihtimaline karşı denetler
+    const posterUrl = movie.poster || movie.Poster || "";
+    poster.value = posterUrl;
+    posterPreview.src = posterUrl !== "" ? posterUrl : "https://placehold.co/300x450?text=Poster";
 }
-poster.addEventListener("keyup", () => {
 
+poster.addEventListener("keyup", () => {
     if (poster.value.trim() !== "") {
         posterPreview.src = poster.value;
     }
 });
+
 posterPreview.onerror = function () {
     this.src = "https://placehold.co/300x450?text=Poster";
 };
 
 async function saveMovie() {
+    const actorArray = actors.value
+        .split(",")
+        .map(name => name.trim())
+        .filter(name => name !== "")
+        .map(name => ({ name: name }));
+
     const body = {
         title: title.value,
         year: Number(year.value),
@@ -130,19 +124,15 @@ async function saveMovie() {
         country: country.value,
         language: language.value,
         awards: awards.value,
-        actors: actors.value
-            .split(",")
-            .map(name => ({ name: name.trim() })),
+        actors: actorArray,
         plot: plot.value,
         poster: poster.value
-};
+    };
 
     try {
         const response = await fetch(`${API}/${id}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(body)
         });
 
@@ -161,9 +151,7 @@ async function saveMovie() {
             "İçerik başarıyla güncellendi."
         );
         window.location.href = "library.html";
-    }
-
-    catch (error) {
+    } catch (error) {
         console.error(error);
         await showMessage(
             "error",
@@ -174,18 +162,18 @@ async function saveMovie() {
 }
 
 async function refreshOmdb() {
-
     try {
         const response = await fetch(`${API}/sync/${id}`, {
-            method: "PATCH"
+            method: "PATCH",
+            headers: getAuthHeaders()
         });
 
         if (!response.ok) {
             await showMessage(
-            "error",
-            "OMDb Güncellemesi Başarısız",
-            "Veriler OMDb'den alınamadı."
-        );
+                "error",
+                "OMDb Güncellemesi Başarısız",
+                "Veriler OMDb'den alınamadı."
+            );
             return;
         }
 
@@ -196,9 +184,7 @@ async function refreshOmdb() {
             "OMDb Güncellendi",
             "İçerik başarıyla OMDb ile senkronize edildi."
         );
-    }
-
-    catch (error) {
+    } catch (error) {
         console.error(error);
         await showMessage(
             "error",

@@ -15,10 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/content")
-@CrossOrigin(origins = {
-        "http://127.0.0.1:5500",
-        "http://localhost:5500"
-})
+@CrossOrigin(origins = "*")
 public class ContentController {
 
     private final ContentService service;
