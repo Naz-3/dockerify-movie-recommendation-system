@@ -7,6 +7,7 @@ let editingEpisodeId = null;
 let openedSeason = null;
 let allEpisodes = [];
 let currentSeasonVideos = {};
+let activeSeasonForAddMedia = null;
 
 let currentWatchedMinutes = 0;
 let totalMovieRuntimeMinutes = 0;
@@ -49,6 +50,11 @@ function checkAuthGuard() {
         return false;
     }
     return true;
+}
+
+function isAdminUser() {
+    const role = localStorage.getItem("userRole") || localStorage.getItem("role");
+    return role === "ADMIN" || role === "ROLE_ADMIN" || localStorage.getItem("isAdmin") === "true";
 }
 
 function handleUnauthorized() {
@@ -184,35 +190,42 @@ async function renderEpisodes() {
         seasonItem.appendChild(headerDiv);
 
         if (isOpened) {
-            // Fragman/Videoları Çek ve Görsel Kapaklı Kartlar Olarak Ekle
             const videos = await fetchSeasonVideos(seasonNumber);
-            if (videos && videos.length > 0) {
-                const videoWrapper = document.createElement("div");
-                videoWrapper.className = "season-videos-wrapper";
-                
-                const videoCardsHtml = videos.slice(0, 4).map(v => `
-                    <div class="video-card" onclick="openVideoModal('${v.key}', '${v.name.replace(/'/g, "\\'")}')">
-                        <div class="video-thumbnail-container">
-                            <img class="video-thumbnail" src="https://img.youtube.com/vi/${v.key}/hqdefault.jpg" alt="${v.name}">
-                            <div class="play-overlay">
-                                <div class="play-icon-circle">▶</div>
-                            </div>
-                        </div>
-                        <div class="video-card-body">
-                            <div class="video-card-title" title="${v.name}">${v.name}</div>
-                            <span class="video-card-badge">${v.type || 'Fragman'}</span>
+            const videoWrapper = document.createElement("div");
+            videoWrapper.className = "season-videos-wrapper";
+            
+            let videoCardsHtml = (videos || []).slice(0, 4).map(v => `
+                <div class="video-card" onclick="openVideoModal('${v.key}', '${v.name.replace(/'/g, "\\'")}')">
+                    <div class="video-thumbnail-container">
+                        <img class="video-thumbnail" src="https://img.youtube.com/vi/${v.key}/hqdefault.jpg" alt="${v.name}">
+                        <div class="play-overlay">
+                            <div class="play-icon-circle">▶</div>
                         </div>
                     </div>
-                `).join("");
+                    <div class="video-card-body">
+                        <div class="video-card-title" title="${v.name}">${v.name}</div>
+                        <span class="video-card-badge">${v.type || 'Fragman'}</span>
+                    </div>
+                </div>
+            `).join("");
 
-                videoWrapper.innerHTML = `
-                    <div class="season-videos-title">🎬 Sezon Fragmanları & Videoları</div>
-                    <div class="video-grid">${videoCardsHtml}</div>
+            if (isAdminUser()) {
+                videoCardsHtml += `
+                    <div class="video-card add-media-card" onclick="openAddMediaModal(${seasonNumber})">
+                        <div class="add-media-inner">
+                            <div class="add-media-icon">+</div>
+                            <div class="add-media-text">Medya Ekle</div>
+                        </div>
+                    </div>
                 `;
-                seasonItem.appendChild(videoWrapper);
             }
 
-            // Bölüm Listesi
+            videoWrapper.innerHTML = `
+                <div class="season-videos-title">🎬 Sezon Fragmanları & Videoları</div>
+                <div class="video-grid">${videoCardsHtml}</div>
+            `;
+            seasonItem.appendChild(videoWrapper);
+
             const episodeList = document.createElement("div");
             episodeList.className = "episode-list";
             grouped[seasonNumber].forEach(ep => {
@@ -226,9 +239,7 @@ async function renderEpisodes() {
                             ⭐ ${ep.rating ?? "-"}
                             ⏱ ${ep.runtime ?? "-"}
                         </div>
-                        <button class="episode-edit-btn" onclick="openEpisodeModal(${ep.id})">
-                            Düzenle
-                        </button>
+                        ${isAdminUser() ? `<button class="episode-edit-btn" onclick="openEpisodeModal(${ep.id})">Düzenle</button>` : ''}
                     </div>
                 </div>
                 `;
@@ -275,6 +286,85 @@ function openEpisodeModal(id) {
 
 function closeEpisodeModal() {
     if (modal) modal.classList.add("hidden");
+}
+
+function openAddMediaModal(seasonNumber) {
+    activeSeasonForAddMedia = seasonNumber;
+    const addModal = document.getElementById("addMediaModal");
+    if (addModal) addModal.classList.remove("hidden");
+}
+
+function closeAddMediaModal() {
+    const addModal = document.getElementById("addMediaModal");
+    if (addModal) addModal.classList.add("hidden");
+}
+
+function toggleMediaInputType(type) {
+    const linkGroup = document.getElementById("mediaLinkGroup");
+    const fileGroup = document.getElementById("mediaFileGroup");
+    if (type === 'link') {
+        if (linkGroup) linkGroup.classList.remove("hidden");
+        if (fileGroup) fileGroup.classList.add("hidden");
+    } else {
+        if (linkGroup) linkGroup.classList.add("hidden");
+        if (fileGroup) fileGroup.classList.remove("hidden");
+    }
+}
+
+async function saveNewMedia() {
+    const nameEl = document.getElementById("mediaTitleInput");
+    const typeEl = document.getElementById("mediaTypeSelect");
+    const sourceEl = document.querySelector('input[name="mediaSource"]:checked');
+
+    if (!nameEl || !typeEl || !sourceEl) return;
+
+    const name = nameEl.value.trim();
+    const type = typeEl.value;
+    const inputOption = sourceEl.value;
+
+    let mediaKey = "";
+
+    if (inputOption === 'link') {
+        const urlOrKey = document.getElementById("mediaUrlInput")?.value.trim() || "";
+        if (urlOrKey.includes("v=")) {
+            mediaKey = urlOrKey.split("v=")[1].split("&")[0];
+        } else if (urlOrKey.includes("youtu.be/")) {
+            mediaKey = urlOrKey.split("youtu.be/")[1].split("?")[0];
+        } else {
+            mediaKey = urlOrKey;
+        }
+    } else {
+        const fileInput = document.getElementById("mediaFileInput");
+        if (!fileInput || fileInput.files.length === 0) {
+            alert("Lütfen bir dosya seçin!");
+            return;
+        }
+        alert("Dosya yükleme simüle edildi.");
+        return;
+    }
+
+    if (!mediaKey || !name) {
+        alert("Lütfen tüm alanları doldurun!");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API}/${id}/season/${activeSeasonForAddMedia}/videos`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ name, key: mediaKey, type, site: "YouTube" })
+        });
+
+        if (response.ok) {
+            delete currentSeasonVideos[activeSeasonForAddMedia];
+            closeAddMediaModal();
+            await renderEpisodes();
+        } else {
+            alert("Medya eklenirken hata oluştu.");
+        }
+    } catch (e) {
+        console.error("Video ekleme hatası:", e);
+    }
 }
 
 window.onload = () => {

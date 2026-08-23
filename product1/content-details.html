@@ -36,7 +36,7 @@
     <div class="details-wrapper">
 
         <div class="poster-panel">
-            <img id="poster" src="https://placehold.co/300x450?text=Poster">
+            <img id="poster" src="https://placehold.co/300x450?text=Poster" alt="Poster">
         </div>
 
         <div class="details-panel">
@@ -117,7 +117,7 @@
     <div class="episode-modal-content">
         <span class="close-modal" onclick="closeEpisodeModal()">&times;</span>
         <h2>Bölümü Düzenle</h2>
-        <img id="modalPosterPreview" src="https://placehold.co/250x360?text=Poster">
+        <img id="modalPosterPreview" src="https://placehold.co/250x360?text=Poster" alt="Önizleme">
 
         <div class="modal-group">
             <label>Poster URL</label>
@@ -141,6 +141,52 @@
         <h3 id="videoModalTitle" style="margin-bottom: 15px; color: #fff;">Fragman</h3>
         <div class="video-container">
             <iframe id="videoIframe" src="" frameborder="0" allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+<!-- Medya Ekle Modalı (Yönetici İçe Aktarma / Link Verme) -->
+<div id="addMediaModal" class="episode-modal hidden">
+    <div class="episode-modal-content">
+        <span class="close-modal" onclick="closeAddMediaModal()">&times;</span>
+        <h3 style="color: #fff; margin-bottom: 15px;">Yeni Medya Ekle</h3>
+        
+        <div class="modal-group">
+            <label style="color: #a1c0ce;">Başlık</label>
+            <input type="text" id="mediaTitleInput" placeholder="Örn: Official Trailer 2">
+        </div>
+
+        <div class="modal-group">
+            <label style="color: #a1c0ce;">Medya Türü</label>
+            <select id="mediaTypeSelect" class="modal-select">
+                <option value="Trailer">Fragman</option>
+                <option value="Teaser">Teaser</option>
+                <option value="Behind the Scenes">Kamera Arkası</option>
+                <option value="Clip">Klip</option>
+            </select>
+        </div>
+
+        <div class="modal-group">
+            <label style="color: #a1c0ce;">Ekleme Yöntemi</label>
+            <div class="radio-options">
+                <label><input type="radio" name="mediaSource" value="link" checked onclick="toggleMediaInputType('link')"> Link Ver (YouTube)</label>
+                <label><input type="radio" name="mediaSource" value="file" onclick="toggleMediaInputType('file')"> Dosya İçe Aktar</label>
+            </div>
+        </div>
+
+        <div class="modal-group" id="mediaLinkGroup">
+            <label style="color: #a1c0ce;">YouTube Linki veya Video ID</label>
+            <input type="text" id="mediaUrlInput" placeholder="https://www.youtube.com/watch?v=XXXXX">
+        </div>
+
+        <div class="modal-group hidden" id="mediaFileGroup">
+            <label style="color: #a1c0ce;">Video Dosyası Seç</label>
+            <input type="file" id="mediaFileInput" accept="video/*">
+        </div>
+
+        <div class="modal-buttons">
+            <button class="save-btn" onclick="saveNewMedia()">Kaydet ve Ekle</button>
+            <button class="cancelBtn" onclick="closeAddMediaModal()">İptal</button>
         </div>
     </div>
 </div>

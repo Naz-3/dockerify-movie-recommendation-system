@@ -388,9 +388,7 @@ a:hover{
     line-height:1.8;
 }
 
-/* ==========================================
-   İZLEME İLERLEME ÇUBUĞU & ETKİLEŞİM STİLLERİ
-   ========================================== */
+/* ИZLEME İLERLEME ÇUBUĞU */
 .watch-progress-wrapper{
     margin-top:25px;
     background:rgba(255, 255, 255, 0.03);
@@ -475,9 +473,7 @@ a:hover{
     border-color:var(--primary);
 }
 
-/* ==========================================
-   SEZON & BÖLÜM STİLLERİ
-   ========================================== */
+/* SEZON & BÖLÜM STİLLERİ */
 .details-divider{
     margin:50px 0 30px;
     border:none;
@@ -584,9 +580,7 @@ a:hover{
     opacity:.9;
 }
 
-/* ==========================================
-   MODAL STİLLERİ & KOYU SAYDAM / HOVER TEMALARI
-   ========================================== */
+/* MODAL STİLLERİ */
 .episode-modal{
     position:fixed;
     inset:0;
@@ -637,7 +631,8 @@ a:hover{
 }
 
 .modal-group input,
-.modal-group textarea{
+.modal-group textarea,
+.modal-select {
     width:100%;
     padding:12px;
     border-radius:10px;
@@ -675,9 +670,7 @@ a:hover{
     cursor:pointer;
 }
 
-/* ==========================================
-   YENİLENMİŞ GÖRSEL KAPAKLI FRAGMAN & VİDEO KARTLARI
-   ========================================== */
+/* VİDEO KARTLARI */
 .season-videos-wrapper {
     padding: 20px;
     background: rgba(15, 17, 21, 0.6);
@@ -797,6 +790,57 @@ a:hover{
     color: var(--text2);
 }
 
+/* MEDYA EKLE KART STİLLERİ */
+.add-media-card {
+    border: 2px dashed rgba(206, 150, 191, 0.4) !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+}
+
+.add-media-card:hover {
+    border-color: var(--primary) !important;
+    background: rgba(206, 150, 191, 0.08) !important;
+    box-shadow: 0 0 20px rgba(206, 150, 191, 0.25);
+}
+
+.add-media-inner {
+    text-align: center;
+    color: var(--primary);
+}
+
+.add-media-icon {
+    font-size: 38px;
+    font-weight: 300;
+    line-height: 1;
+    margin-bottom: 6px;
+    transition: transform 0.25s ease;
+}
+
+.add-media-card:hover .add-media-icon {
+    transform: scale(1.25) rotate(90deg);
+}
+
+.add-media-text {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.radio-options {
+    display: flex;
+    gap: 20px;
+    margin-top: 8px;
+    color: #fff;
+    font-size: 14px;
+}
+
+.radio-options input {
+    width: auto !important;
+    margin-right: 6px;
+}
+
 .video-modal-content {
     width: 900px;
     max-width: 92%;
@@ -811,7 +855,7 @@ a:hover{
 
 .video-container {
     position: relative;
-    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    padding-bottom: 56.25%;
     height: 0;
     overflow: hidden;
     border-radius: 12px;
@@ -826,9 +870,6 @@ a:hover{
     height: 100%;
 }
 
-/* ==========================================
-   RESPONSIVE (MOBİL) DÜZENLEMELER
-   ========================================== */
 @media(max-width:900px){
     .sidebar{
         position:relative;
