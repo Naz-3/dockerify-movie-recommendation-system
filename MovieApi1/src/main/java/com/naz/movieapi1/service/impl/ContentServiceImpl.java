@@ -6,6 +6,8 @@ import com.naz.movieapi1.dto.omdb.OmdbSearchItemDto;
 import com.naz.movieapi1.dto.omdb.OmdbSearchResponseDto;
 import com.naz.movieapi1.dto.tmdb.TmdbMovieResponseDto;
 import com.naz.movieapi1.dto.tmdb.TmdbSearchResponseDto;
+import com.naz.movieapi1.dto.video.TmdbVideoResponseDto;
+import com.naz.movieapi1.dto.video.VideoDto;
 import com.naz.movieapi1.entity.Content;
 import com.naz.movieapi1.exception.MovieAlreadyExistsException;
 import com.naz.movieapi1.exception.MovieNotFoundException;
@@ -110,7 +112,6 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public List<OmdbSearchItemDto> searchMovies(String title) {
-        // 1. Önce TMDB Multi-Search (Film + Dizi) deniyoruz
         if (tmdbApiKey != null && !tmdbApiKey.isBlank()) {
             try {
                 String tmdbUrl = tmdbBaseUrl + "/search/multi?api_key=" + tmdbApiKey + "&query=" + title;
@@ -127,7 +128,6 @@ public class ContentServiceImpl implements ContentService {
                         Map<?, ?> itemMap = (Map<?, ?>) obj;
                         String mediaType = (String) itemMap.get("media_type");
 
-                        // Sadece film (movie) ve dizileri (tv) filtreliyoruz
                         if ("movie".equalsIgnoreCase(mediaType) || "tv".equalsIgnoreCase(mediaType)) {
                             OmdbSearchItemDto item = new OmdbSearchItemDto();
 
@@ -159,7 +159,6 @@ public class ContentServiceImpl implements ContentService {
             }
         }
 
-        // 2. Fallback: OMDb Arama (Tip filtresiz arar, dizi ve filmleri getirir)
         String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&s=" + title;
         OmdbSearchResponseDto response = restClient.get()
                 .uri(url)
@@ -180,10 +179,6 @@ public class ContentServiceImpl implements ContentService {
                 .retrieve()
                 .body(OmdbDto.class);
     }
-
-    // ==========================================
-    // İÇERİK AKTARIM (IMPORT) METODLARI
-    // ==========================================
 
     @Override
     public Content importMovie(String identifier) {
@@ -540,6 +535,39 @@ public class ContentServiceImpl implements ContentService {
         dto.setEpisodeCount(omdbSeason.getEpisodes().size());
         dto.setEpisodes(detailedEpisodes);
         return dto;
+    }
+
+    @Override
+    public List<VideoDto> getSeasonVideos(String imdbId, Integer season) {
+        if (imdbId == null || imdbId.isBlank() || season == null || tmdbApiKey == null || tmdbApiKey.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        try {
+            // IMDb ID üzerinden TMDB dizi ID'sini buluyoruz
+            String findUrl = tmdbBaseUrl + "/find/" + imdbId + "?api_key=" + tmdbApiKey + "&external_source=imdb_id";
+            Map<?, ?> findResponse = restClient.get().uri(findUrl).retrieve().body(Map.class);
+
+            if (findResponse != null && findResponse.containsKey("tv_results")) {
+                List<?> tvResults = (List<?>) findResponse.get("tv_results");
+                if (tvResults != null && !tvResults.isEmpty()) {
+                    Map<?, ?> tvShow = (Map<?, ?>) tvResults.get(0);
+                    Long tmdbTvId = ((Number) tvShow.get("id")).longValue();
+
+                    // TMDB Sezon videoları endpoint'i
+                    String videoUrl = String.format("%s/tv/%d/season/%d/videos?api_key=%s&language=en-US",
+                            tmdbBaseUrl, tmdbTvId, season, tmdbApiKey);
+
+                    TmdbVideoResponseDto response = restClient.get().uri(videoUrl).retrieve().body(TmdbVideoResponseDto.class);
+                    if (response != null && response.getResults() != null) {
+                        return response.getResults();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("TMDB Sezon Videoları Çekilemedi (" + imdbId + " S" + season + "): " + e.getMessage());
+        }
+        return Collections.emptyList();
     }
 
     @Override

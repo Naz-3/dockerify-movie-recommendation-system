@@ -3,6 +3,7 @@ package com.naz.movieapi1.service;
 import com.naz.movieapi1.dto.omdb.OmdbDto;
 import com.naz.movieapi1.dto.omdb.OmdbSearchItemDto;
 import com.naz.movieapi1.dto.search.SearchResultDto;
+import com.naz.movieapi1.dto.video.VideoDto;
 import com.naz.movieapi1.entity.Content;
 import com.naz.movieapi1.dto.SeasonDto;
 import com.naz.movieapi1.dto.details.MovieDetailDto;
@@ -26,6 +27,7 @@ public interface ContentService {
     void syncAllContents();
     List<SeasonDto> getSeasons(String imdbId);
     SeasonDto getSeasonDetails(String imdbId, Integer season);
+    List<VideoDto> getSeasonVideos(String imdbId, Integer season);
 
     List<SearchResultDto> searchAll(String title);
     MovieDetailDto getDetails(Integer id);

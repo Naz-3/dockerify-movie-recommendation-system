@@ -1,15 +1,15 @@
 const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 const EPISODE_API = "https://dockerify-movie-recommendation-system.onrender.com/api/episodes";
 const WATCH_HISTORY_API = "https://dockerify-movie-recommendation-system.onrender.com/api/user-activity/track";
-const USER_ACTIVITY_API = "https://dockerify-movie-recommendation-system.onrender.com/api/user-activity"; // Son durumu çekmek için
+const USER_ACTIVITY_API = "https://dockerify-movie-recommendation-system.onrender.com/api/user-activity";
 
 let editingEpisodeId = null;
 let openedSeason = null;
 let allEpisodes = [];
+let currentSeasonVideos = {}; // Sezon videolarını önbelleğe almak için
 
-// İzleme İlerleme Değişkenleri
 let currentWatchedMinutes = 0;
-let totalMovieRuntimeMinutes = 0; // Dakika cinsinden filmin toplam süresi
+let totalMovieRuntimeMinutes = 0;
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
@@ -34,7 +34,6 @@ const modalPoster = document.getElementById("modalPoster");
 const modalPlot = document.getElementById("modalPlot");
 const modalPosterPreview = document.getElementById("modalPosterPreview");
 
-// 1. JWT Token alma yardımcı fonksiyonu
 function getAuthHeaders() {
     const token = localStorage.getItem("jwtToken");
     return {
@@ -43,7 +42,6 @@ function getAuthHeaders() {
     };
 }
 
-// 2. Oturum Koruma (Auth Guard)
 function checkAuthGuard() {
     const token = localStorage.getItem("jwtToken");
     if (!token) {
@@ -53,146 +51,17 @@ function checkAuthGuard() {
     return true;
 }
 
-// 3. Yetkisiz Erişim Yönetimi (Unauthorized Handling)
 function handleUnauthorized() {
     alert("Oturum süreniz doldu veya bu işlem için yetkiniz yok.");
     localStorage.clear();
     window.location.href = "login.html";
 }
 
-// KULLANICI & İZLEME İLERLEMESİ ENTEGRASYON MANTIĞI
-function getActiveUserId() {
-    return localStorage.getItem("activeUserId") || 1;
-}
-
-// "123 min" gibi string gelen süreyi integer dakikaya çevirir
 function parseRuntimeToMinutes(runtimeStr) {
     if (!runtimeStr || runtimeStr === "N/A") return 0;
     const minutes = parseInt(runtimeStr);
     return isNaN(minutes) ? 0 : minutes;
 }
-
-// Progress Bar ve Yüzde Metnini Günceller
-function updateUIProgress() {
-    const progressBar = document.getElementById("progressBar");
-    const progressText = document.getElementById("progressText");
-
-    if (!progressBar || !progressText) return;
-
-    if (totalMovieRuntimeMinutes === 0) {
-        progressBar.style.width = "0%";
-        progressText.textContent = `${currentWatchedMinutes} dk`;
-        return;
-    }
-
-    // Maksimum %100 olacak şekilde yüzdeyi hesapla
-    const percentage = Math.min(100, Math.round((currentWatchedMinutes / totalMovieRuntimeMinutes) * 100));
-    
-    progressBar.style.width = `${percentage}%`;
-    progressText.textContent = `${currentWatchedMinutes} / ${totalMovieRuntimeMinutes} dk (%${percentage})`;
-}
-
-// Sayfa yüklendiğinde kullanıcının bu içerik için en son kaydedilmiş geçmişini çeker (GET - Protected)
-async function loadUserWatchProgress() {
-    if (!id) return;
-    const userId = getActiveUserId();
-
-    try {
-        const response = await fetch(`${USER_ACTIVITY_API}/user/${userId}/content/${id}`, {
-            method: "GET",
-            headers: getAuthHeaders()
-        });
-
-        if (response.status === 401 || response.status === 403) {
-            handleUnauthorized();
-            return;
-        }
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data && data.watchedMinutes !== undefined) {
-                currentWatchedMinutes = data.watchedMinutes;
-                updateUIProgress();
-                console.log(`ℹ️ Kayıtlı izleme süresi yüklendi: ${currentWatchedMinutes} dk`);
-            }
-        }
-    } catch (error) {
-        console.warn("⚠️ Kullanıcı izleme geçmişi yüklenirken hata alındı:", error);
-    }
-}
-
-// İzleme İlerlemesini Sunucuya Gönder (POST - Protected)
-async function sendWatchProgress(watchedMinutes, isLiked = null) {
-    if (!id) return;
-
-    const payload = {
-        userId: parseInt(getActiveUserId()),
-        contentId: parseInt(id),
-        watchedMinutes: parseInt(watchedMinutes),
-        isLiked: isLiked
-    };
-
-    try {
-        const response = await fetch(WATCH_HISTORY_API, {
-            method: "POST",
-            headers: getAuthHeaders(),
-            body: JSON.stringify(payload)
-        });
-
-        if (response.status === 401 || response.status === 403) {
-            handleUnauthorized();
-            return;
-        }
-
-        if (response.ok) {
-            console.log(`✅ İzleme ilerlemesi kaydedildi: ${watchedMinutes} dk (Kullanıcı: ${payload.userId})`);
-        } else {
-            console.warn("⚠️ İzleme ilerlemesi kaydedilemedi.");
-        }
-    } catch (error) {
-        console.error("❌ İzleme ilerlemesi gönderilirken hata oluştu:", error);
-    }
-}
-
-function addWatchMinutes(minutes) {
-    if (totalMovieRuntimeMinutes > 0 && currentWatchedMinutes + minutes > totalMovieRuntimeMinutes) {
-        currentWatchedMinutes = totalMovieRuntimeMinutes;
-    } else {
-        currentWatchedMinutes += minutes;
-    }
-
-    console.log(`⏱ Toplam izlenen süre: ${currentWatchedMinutes} dk`);
-    
-    updateUIProgress();
-    sendWatchProgress(currentWatchedMinutes, null);
-
-    if (typeof showToast === "function") {
-        showToast("info", `${minutes} dk izleme eklendi. (Toplam: ${currentWatchedMinutes} dk)`);
-    }
-}
-
-function setupWatchEvents() {
-    const likeBtn = document.getElementById("likeBtn");
-    const dislikeBtn = document.getElementById("dislikeBtn");
-
-    if (likeBtn) {
-        likeBtn.addEventListener("click", () => {
-            sendWatchProgress(currentWatchedMinutes, true);
-            if (typeof showToast === "function") showToast("success", "Beğeniniz kaydedildi.");
-        });
-    }
-
-    if (dislikeBtn) {
-        dislikeBtn.addEventListener("click", () => {
-            sendWatchProgress(currentWatchedMinutes, false);
-            if (typeof showToast === "function") showToast("info", "Geri bildiriminiz alındı.");
-        });
-    }
-}
-
-// ==========================================
-// İÇERİK VE BÖLÜM YÜKLEME MANTIĞI
-// ==========================================
 
 async function loadMovie() {
     try {
@@ -214,19 +83,14 @@ async function loadMovie() {
         }
 
         const movie = await response.json();
-        
         totalMovieRuntimeMinutes = parseRuntimeToMinutes(movie.runtime);
         
         fillDetails(movie);
-        updateUIProgress();
 
         if (movie.type === "series") {
             allEpisodes = movie.episodes ?? [];
             renderEpisodes();
         }
-
-        // Sayfa detayları yüklendikten sonra kullanıcının veritabanındaki son durumunu oku
-        await loadUserWatchProgress();
 
     } catch (error) {
         console.error(error);
@@ -268,27 +132,30 @@ function fillDetails(movie) {
     }
 }
 
-async function loadEpisodes() {
+// TMDB Sezon Videolarını Backend API'den çeken fonksiyon
+async function fetchSeasonVideos(seasonNumber) {
+    if (currentSeasonVideos[seasonNumber]) {
+        return currentSeasonVideos[seasonNumber];
+    }
+
     try {
-        const response = await fetch(`${EPISODE_API}/content/${id}`, {
+        const response = await fetch(`${API}/${id}/season/${seasonNumber}/videos`, {
             method: "GET",
             headers: getAuthHeaders()
         });
 
-        if (response.status === 401 || response.status === 403) {
-            handleUnauthorized();
-            return;
+        if (response.ok) {
+            const videos = await response.json();
+            currentSeasonVideos[seasonNumber] = videos;
+            return videos;
         }
-
-        if (!response.ok) return;
-        allEpisodes = await response.json();
-        renderEpisodes();
-    } catch (e) {
-        console.error(e);
+    } catch (error) {
+        console.error("Sezon videoları yüklenirken hata oluştu:", error);
     }
+    return [];
 }
 
-function renderEpisodes() {
+async function renderEpisodes() {
     if (!seasonList) return;
     seasonList.innerHTML = "";
     const grouped = {};
@@ -299,26 +166,53 @@ function renderEpisodes() {
         grouped[ep.seasonNumber].push(ep);
     });
 
-    Object.keys(grouped).forEach(seasonNumber => {
+    for (const seasonNumber of Object.keys(grouped)) {
         const seasonItem = document.createElement("div");
         seasonItem.className = "season-item";
+        
+        const isOpened = openedSeason == seasonNumber;
+        
         seasonItem.innerHTML = `
             <div class="season-header">
                 <span>
-                    ${openedSeason == seasonNumber ? "▼" : "▶"}
-                    Season ${seasonNumber}
+                    ${isOpened ? "▼" : "▶"} Season ${seasonNumber}
                 </span>
-                <span>
-                    ${grouped[seasonNumber].length} Bölüm
-                </span>
+                <span>${grouped[seasonNumber].length} Bölüm</span>
             </div>
         `;
-        seasonItem.querySelector(".season-header").onclick = () => {
+        
+        seasonItem.querySelector(".season-header").onclick = async () => {
             openedSeason = (openedSeason == seasonNumber) ? null : seasonNumber;
-            renderEpisodes();
+            await renderEpisodes();
         };
 
-        if (openedSeason == seasonNumber) {
+        if (isOpened) {
+            // Sezon Fragman ve Videolar Alanı
+            const videos = await fetchSeasonVideos(seasonNumber);
+            if (videos && videos.length > 0) {
+                const videoWrapper = document.createElement("div");
+                videoWrapper.className = "season-videos-wrapper";
+                
+                let videoCardsHtml = videos.slice(0, 4).map(v => `
+                    <div class="video-card">
+                        <div>
+                            <div class="video-card-title">${v.name}</div>
+                            <div class="video-card-type">${v.type} • ${v.site}</div>
+                        </div>
+                        <button class="watch-video-btn" onclick="openVideoModal('${v.key}', '${v.name.replace(/'/g, "\\'")}')">
+                            ▶ İzle
+                        </button>
+                    </div>
+                `).join("");
+
+                videoWrapper.innerHTML = `
+                    <div class="season-videos-title">🎬 Sezon Fragmanları & Videoları</div>
+                    <div class="video-grid">${videoCardsHtml}</div>
+                `;
+                seasonItem.appendChild(videoWrapper);
+            }
+
+            // Bölümler Listesi
             const episodeList = document.createElement("div");
             episodeList.className = "episode-list";
             grouped[seasonNumber].forEach(ep => {
@@ -342,7 +236,30 @@ function renderEpisodes() {
             seasonItem.appendChild(episodeList);
         }
         seasonList.appendChild(seasonItem);
-    });
+    }
+}
+
+// Video Modal Fonksiyonları
+function openVideoModal(key, title) {
+    const videoModal = document.getElementById("videoModal");
+    const videoIframe = document.getElementById("videoIframe");
+    const videoModalTitle = document.getElementById("videoModalTitle");
+
+    if (videoModal && videoIframe) {
+        videoIframe.src = `https://www.youtube.com/embed/${key}?autoplay=1`;
+        if (videoModalTitle) videoModalTitle.textContent = title;
+        videoModal.classList.remove("hidden");
+    }
+}
+
+function closeVideoModal() {
+    const videoModal = document.getElementById("videoModal");
+    const videoIframe = document.getElementById("videoIframe");
+
+    if (videoModal && videoIframe) {
+        videoIframe.src = "";
+        videoModal.classList.add("hidden");
+    }
 }
 
 function openEpisodeModal(id) {
@@ -361,67 +278,8 @@ function closeEpisodeModal() {
     if (modal) modal.classList.add("hidden");
 }
 
-if (modalPoster) {
-    modalPoster.addEventListener("input", () => {
-        if (modalPosterPreview) modalPosterPreview.src = modalPoster.value;
-    });
-}
-
-async function saveEpisode() {
-    try {
-        const response = await fetch(`${EPISODE_API}/${editingEpisodeId}`, {
-            method: "PUT",
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-                poster: modalPoster.value,
-                plot: modalPlot.value
-            })
-        });
-
-        if (response.status === 401 || response.status === 403) {
-            handleUnauthorized();
-            return;
-        }
-
-        if (!response.ok) {
-            if (typeof showToast === "function") showToast("error", "Bölüm kaydedilemedi.");
-            return;
-        }
-        closeEpisodeModal();
-        await loadEpisodes();
-        if (typeof showToast === "function") showToast("success", "Bölüm başarıyla güncellendi.");
-    } catch (e) {
-        console.error("Bölüm kaydetme hatası:", e);
-    }
-}
-
-async function syncEpisode() {
-    try {
-        const response = await fetch(`${EPISODE_API}/sync/${editingEpisodeId}`, {
-            method: "POST",
-            headers: getAuthHeaders()
-        });
-
-        if (response.status === 401 || response.status === 403) {
-            handleUnauthorized();
-            return;
-        }
-
-        if (!response.ok) {
-            if (typeof showToast === "function") showToast("error", "OMDb ile senkronizasyon başarısız.");
-            return;
-        }
-        closeEpisodeModal();
-        await loadEpisodes();
-        if (typeof showToast === "function") showToast("success", "OMDb verileri geri yüklendi.");
-    } catch (e) {
-        console.error("Bölüm senkronizasyon hatası:", e);
-    }
-}
-
 window.onload = () => {
     if (checkAuthGuard()) {
         loadMovie();
-        setupWatchEvents();
     }
 };

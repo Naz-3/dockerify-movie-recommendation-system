@@ -3,6 +3,7 @@ package com.naz.movieapi1.controller;
 import com.naz.movieapi1.dto.SeasonDto;
 import com.naz.movieapi1.dto.details.MovieDetailDto;
 import com.naz.movieapi1.dto.search.SearchResultDto;
+import com.naz.movieapi1.dto.video.VideoDto;
 import com.naz.movieapi1.entity.Content;
 import com.naz.movieapi1.service.ActorService;
 import com.naz.movieapi1.service.ContentService;
@@ -21,7 +22,6 @@ public class ContentController {
     private final ContentService service;
     private final ActorService actorService;
 
-    // Çift enjeksiyon temizlendi, sadece gerekli bağımlılıklar bırakıldı.
     public ContentController(ContentService service, ActorService actorService) {
         this.service = service;
         this.actorService = actorService;
@@ -74,7 +74,6 @@ public class ContentController {
         return service.importMovie(imdbId);
     }
 
-    // Hata durumunda 500 atmak yerine hatayı yakalayacak şekilde güncellendi
     @PostMapping("/import/bulk")
     public ResponseEntity<?> importBulkMovies(@RequestBody List<String> imdbIds) {
         try {
@@ -84,7 +83,7 @@ public class ContentController {
             List<Content> importedContents = service.importBulkMovies(imdbIds);
             return ResponseEntity.ok(importedContents);
         } catch (Exception e) {
-            e.printStackTrace(); // Konsola hatayı detaylı basar
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Toplu aktarım sırasında hata oluştu: " + e.getMessage());
         }
@@ -134,6 +133,14 @@ public class ContentController {
             @PathVariable Integer season) {
         Content content = service.getById(id);
         return service.getSeasonDetails(content.getImdbId(), season);
+    }
+
+    @GetMapping("/{id}/season/{season}/videos")
+    public List<VideoDto> getSeasonVideos(
+            @PathVariable Integer id,
+            @PathVariable Integer season) {
+        Content content = service.getById(id);
+        return service.getSeasonVideos(content.getImdbId(), season);
     }
 
     @PostMapping("/custom")
