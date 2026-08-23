@@ -159,25 +159,35 @@ public class ContentServiceImpl implements ContentService {
             }
         }
 
-        String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&s=" + title;
-        OmdbSearchResponseDto response = restClient.get()
-                .uri(url)
-                .retrieve()
-                .body(OmdbSearchResponseDto.class);
+        try {
+            String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&s=" + title;
+            OmdbSearchResponseDto response = restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(OmdbSearchResponseDto.class);
 
-        if (response == null || response.getSearch() == null) {
+            if (response == null || response.getSearch() == null) {
+                return Collections.emptyList();
+            }
+            return response.getSearch();
+        } catch (Exception e) {
+            System.err.println("OMDb arama hatası: " + e.getMessage());
             return Collections.emptyList();
         }
-        return response.getSearch();
     }
 
     @Override
     public OmdbDto getMovieByImdbId(String imdbId) {
-        String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
-        return restClient.get()
-                .uri(url)
-                .retrieve()
-                .body(OmdbDto.class);
+        try {
+            String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
+            return restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(OmdbDto.class);
+        } catch (Exception e) {
+            System.err.println("OMDb isteği başarısız oldu (API Limiti/Ağ Hatası): " + e.getMessage());
+            return null;
+        }
     }
 
     @Override
@@ -211,7 +221,7 @@ public class ContentServiceImpl implements ContentService {
         } else {
             OmdbDto movie = getMovieByImdbId(identifier);
             if (movie == null || movie.getTitle() == null) {
-                throw new MovieNotFoundException("Film detayları OMDb'den alınamadı: " + identifier);
+                throw new MovieNotFoundException("Film detayları OMDb/TMDB'den alınamadı: " + identifier);
             }
 
             content.setTitle(movie.getTitle());
@@ -385,8 +395,8 @@ public class ContentServiceImpl implements ContentService {
             throw new MovieNotFoundException("IMDb ID bulunamadı.");
         }
         OmdbDto movie = getMovieByImdbId(content.getImdbId());
-        if (movie == null) {
-            throw new MovieNotFoundException("OMDb verisi bulunamadı.");
+        if (movie == null || movie.getTitle() == null) {
+            throw new MovieNotFoundException("OMDb verisi alınamadı (API kotası dolmuş veya geçersiz ID olabilir).");
         }
         content.setTitle(movie.getTitle());
         if (movie.getYear() != null && !movie.getYear().equals("N/A")) {
@@ -455,86 +465,107 @@ public class ContentServiceImpl implements ContentService {
         }
         int totalSeasons = Integer.parseInt(series.getTotalSeasons().trim());
         for (int season = 1; season <= totalSeasons; season++) {
-            String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + content.getImdbId() + "&Season=" + season;
-            OmdbSeasonDto omdbSeason = restClient.get()
-                    .uri(seasonUrl)
-                    .retrieve()
-                    .body(OmdbSeasonDto.class);
-            if (omdbSeason == null || omdbSeason.getEpisodes() == null) {
-                continue;
-            }
-            for (EpisodeDto dto : omdbSeason.getEpisodes()) {
-                if (episodeRepository.existsByImdbId(dto.getImdbId())) {
+            try {
+                String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + content.getImdbId() + "&Season=" + season;
+                OmdbSeasonDto omdbSeason = restClient.get()
+                        .uri(seasonUrl)
+                        .retrieve()
+                        .body(OmdbSeasonDto.class);
+                if (omdbSeason == null || omdbSeason.getEpisodes() == null) {
                     continue;
                 }
-                Episode detail = new Episode();
-                EpisodeDto episodeDetail = getEpisodeDetails(dto.getImdbId());
+                for (EpisodeDto dto : omdbSeason.getEpisodes()) {
+                    if (episodeRepository.existsByImdbId(dto.getImdbId())) {
+                        continue;
+                    }
+                    Episode detail = new Episode();
+                    EpisodeDto episodeDetail = getEpisodeDetails(dto.getImdbId());
 
-                detail.setImdbId(episodeDetail.getImdbId());
-                detail.setTitle(episodeDetail.getTitle());
-                detail.setPlot(episodeDetail.getPlot());
-                detail.setPoster(episodeDetail.getPoster());
-                detail.setRuntime(episodeDetail.getRuntime());
-                try {
-                    detail.setRating(Double.parseDouble(episodeDetail.getImdbRating().trim()));
-                } catch (Exception ignored) {}
-                detail.setSeasonNumber(season);
-                try {
-                    detail.setEpisodeNumber(Integer.parseInt(dto.getEpisode().trim()));
-                } catch (Exception ignored) {}
-                detail.setContent(content);
-                episodeRepository.save(detail);
+                    if (episodeDetail != null) {
+                        detail.setImdbId(episodeDetail.getImdbId());
+                        detail.setTitle(episodeDetail.getTitle());
+                        detail.setPlot(episodeDetail.getPlot());
+                        detail.setPoster(episodeDetail.getPoster());
+                        detail.setRuntime(episodeDetail.getRuntime());
+                        try {
+                            detail.setRating(Double.parseDouble(episodeDetail.getImdbRating().trim()));
+                        } catch (Exception ignored) {}
+                        detail.setSeasonNumber(season);
+                        try {
+                            detail.setEpisodeNumber(Integer.parseInt(dto.getEpisode().trim()));
+                        } catch (Exception ignored) {}
+                        detail.setContent(content);
+                        episodeRepository.save(detail);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Sezon " + season + " çekilirken hata oluştu: " + e.getMessage());
             }
         }
     }
 
     @Override
     public List<SeasonDto> getSeasons(String imdbId) {
-        String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
-        OmdbDto series = restClient.get().uri(url).retrieve().body(OmdbDto.class);
-        if (series == null || series.getTotalSeasons() == null) return Collections.emptyList();
+        try {
+            String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
+            OmdbDto series = restClient.get().uri(url).retrieve().body(OmdbDto.class);
+            if (series == null || series.getTotalSeasons() == null) return Collections.emptyList();
 
-        int total = Integer.parseInt(series.getTotalSeasons().trim());
-        List<SeasonDto> seasons = new ArrayList<>();
-        for (int i = 1; i <= total; i++) {
-            String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId + "&Season=" + i;
-            OmdbSeasonDto omdbSeason = restClient.get().uri(seasonUrl).retrieve().body(OmdbSeasonDto.class);
-            if (omdbSeason != null) {
-                SeasonDto dto = new SeasonDto();
-                dto.setTitle(omdbSeason.getTitle());
-                dto.setSeason(omdbSeason.getSeason());
-                dto.setEpisodeCount(omdbSeason.getEpisodes() != null ? omdbSeason.getEpisodes().size() : 0);
-                seasons.add(dto);
+            int total = Integer.parseInt(series.getTotalSeasons().trim());
+            List<SeasonDto> seasons = new ArrayList<>();
+            for (int i = 1; i <= total; i++) {
+                String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId + "&Season=" + i;
+                OmdbSeasonDto omdbSeason = restClient.get().uri(seasonUrl).retrieve().body(OmdbSeasonDto.class);
+                if (omdbSeason != null) {
+                    SeasonDto dto = new SeasonDto();
+                    dto.setTitle(omdbSeason.getTitle());
+                    dto.setSeason(omdbSeason.getSeason());
+                    dto.setEpisodeCount(omdbSeason.getEpisodes() != null ? omdbSeason.getEpisodes().size() : 0);
+                    seasons.add(dto);
+                }
             }
+            return seasons;
+        } catch (Exception e) {
+            System.err.println("Sezon listesi alınamadı: " + e.getMessage());
+            return Collections.emptyList();
         }
-        return seasons;
     }
 
     private EpisodeDto getEpisodeDetails(String imdbId) {
-        String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
-        return restClient.get().uri(url).retrieve().body(EpisodeDto.class);
+        try {
+            String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
+            return restClient.get().uri(url).retrieve().body(EpisodeDto.class);
+        } catch (Exception e) {
+            System.err.println("Bölüm detayı alınamadı: " + e.getMessage());
+            return null;
+        }
     }
 
     @Override
     public SeasonDto getSeasonDetails(String imdbId, Integer season) {
-        String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId + "&Season=" + season;
-        OmdbSeasonDto omdbSeason = restClient.get().uri(seasonUrl).retrieve().body(OmdbSeasonDto.class);
+        try {
+            String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId + "&Season=" + season;
+            OmdbSeasonDto omdbSeason = restClient.get().uri(seasonUrl).retrieve().body(OmdbSeasonDto.class);
 
-        if (omdbSeason == null || omdbSeason.getEpisodes() == null) return new SeasonDto();
+            if (omdbSeason == null || omdbSeason.getEpisodes() == null) return new SeasonDto();
 
-        List<EpisodeDto> detailedEpisodes = new ArrayList<>();
-        for (EpisodeDto episode : omdbSeason.getEpisodes()) {
-            EpisodeDto detail = getEpisodeDetails(episode.getImdbId());
-            if (detail != null) {
-                detailedEpisodes.add(detail);
+            List<EpisodeDto> detailedEpisodes = new ArrayList<>();
+            for (EpisodeDto episode : omdbSeason.getEpisodes()) {
+                EpisodeDto detail = getEpisodeDetails(episode.getImdbId());
+                if (detail != null) {
+                    detailedEpisodes.add(detail);
+                }
             }
+            SeasonDto dto = new SeasonDto();
+            dto.setTitle(omdbSeason.getTitle());
+            dto.setSeason(omdbSeason.getSeason());
+            dto.setEpisodeCount(omdbSeason.getEpisodes().size());
+            dto.setEpisodes(detailedEpisodes);
+            return dto;
+        } catch (Exception e) {
+            System.err.println("Sezon detayları alınamadı: " + e.getMessage());
+            return new SeasonDto();
         }
-        SeasonDto dto = new SeasonDto();
-        dto.setTitle(omdbSeason.getTitle());
-        dto.setSeason(omdbSeason.getSeason());
-        dto.setEpisodeCount(omdbSeason.getEpisodes().size());
-        dto.setEpisodes(detailedEpisodes);
-        return dto;
     }
 
     @Override
@@ -544,7 +575,6 @@ public class ContentServiceImpl implements ContentService {
         }
 
         try {
-            // IMDb ID üzerinden TMDB dizi ID'sini buluyoruz
             String findUrl = tmdbBaseUrl + "/find/" + imdbId + "?api_key=" + tmdbApiKey + "&external_source=imdb_id";
             Map<?, ?> findResponse = restClient.get().uri(findUrl).retrieve().body(Map.class);
 
@@ -554,7 +584,6 @@ public class ContentServiceImpl implements ContentService {
                     Map<?, ?> tvShow = (Map<?, ?>) tvResults.get(0);
                     Long tmdbTvId = ((Number) tvShow.get("id")).longValue();
 
-                    // TMDB Sezon videoları endpoint'i
                     String videoUrl = String.format("%s/tv/%d/season/%d/videos?api_key=%s&language=en-US",
                             tmdbBaseUrl, tmdbTvId, season, tmdbApiKey);
 
