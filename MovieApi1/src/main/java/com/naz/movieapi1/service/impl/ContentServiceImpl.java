@@ -110,39 +110,56 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public List<OmdbSearchItemDto> searchMovies(String title) {
-        // 1. Önce TMDB'den arama yapmayı dene
+        // 1. Önce TMDB Multi-Search (Film + Dizi) deniyoruz
         if (tmdbApiKey != null && !tmdbApiKey.isBlank()) {
             try {
-                String tmdbUrl = tmdbBaseUrl + "/search/movie?api_key=" + tmdbApiKey + "&query=" + title;
-                TmdbSearchResponseDto tmdbResponse = restClient.get()
+                String tmdbUrl = tmdbBaseUrl + "/search/multi?api_key=" + tmdbApiKey + "&query=" + title;
+                Map<?, ?> response = restClient.get()
                         .uri(tmdbUrl)
                         .retrieve()
-                        .body(TmdbSearchResponseDto.class);
+                        .body(Map.class);
 
-                if (tmdbResponse != null && tmdbResponse.getResults() != null && !tmdbResponse.getResults().isEmpty()) {
+                if (response != null && response.containsKey("results")) {
+                    List<?> results = (List<?>) response.get("results");
                     List<OmdbSearchItemDto> searchItems = new ArrayList<>();
-                    for (TmdbMovieResponseDto movie : tmdbResponse.getResults()) {
-                        OmdbSearchItemDto item = new OmdbSearchItemDto();
-                        item.setTitle(movie.getTitle());
-                        item.setYear(movie.getReleaseDate() != null && movie.getReleaseDate().contains("-")
-                                ? movie.getReleaseDate().split("-")[0] : "");
-                        item.setPoster(movie.getPosterPath() != null ? tmdbImageBaseUrl + movie.getPosterPath() : null);
-                        item.setType("movie");
 
-                        // TMDB ID'sinden gerçek IMDb ID'yi alıyoruz
-                        String imdbId = getImdbIdFromTmdb(movie.getId());
-                        item.setImdbId(imdbId != null ? imdbId : String.valueOf(movie.getId()));
+                    for (Object obj : results) {
+                        Map<?, ?> itemMap = (Map<?, ?>) obj;
+                        String mediaType = (String) itemMap.get("media_type");
 
-                        searchItems.add(item);
+                        // Sadece film (movie) ve dizileri (tv) filtreliyoruz
+                        if ("movie".equalsIgnoreCase(mediaType) || "tv".equalsIgnoreCase(mediaType)) {
+                            OmdbSearchItemDto item = new OmdbSearchItemDto();
+
+                            String name = "movie".equals(mediaType) ? (String) itemMap.get("title") : (String) itemMap.get("name");
+                            item.setTitle(name);
+
+                            String dateKey = "movie".equals(mediaType) ? "release_date" : "first_air_date";
+                            String releaseDate = (String) itemMap.get(dateKey);
+                            item.setYear(releaseDate != null && releaseDate.contains("-") ? releaseDate.split("-")[0] : "");
+
+                            String posterPath = (String) itemMap.get("poster_path");
+                            item.setPoster(posterPath != null ? tmdbImageBaseUrl + posterPath : null);
+
+                            item.setType("movie".equals(mediaType) ? "movie" : "series");
+
+                            Long tmdbId = ((Number) itemMap.get("id")).longValue();
+                            String imdbId = getImdbIdFromTmdb(tmdbId, mediaType);
+                            item.setImdbId(imdbId != null ? imdbId : String.valueOf(tmdbId));
+
+                            searchItems.add(item);
+                        }
                     }
-                    return searchItems;
+                    if (!searchItems.isEmpty()) {
+                        return searchItems;
+                    }
                 }
             } catch (Exception e) {
                 System.err.println("TMDB arama hatası, OMDb fallback kullanılıyor: " + e.getMessage());
             }
         }
 
-        // 2. TMDB sonuç vermezse veya hata verirse OMDb Fallback
+        // 2. Fallback: OMDb Arama (Tip filtresiz arar, dizi ve filmleri getirir)
         String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&s=" + title;
         OmdbSearchResponseDto response = restClient.get()
                 .uri(url)
@@ -174,7 +191,6 @@ public class ContentServiceImpl implements ContentService {
             throw new MovieNotFoundException("Geçersiz film tanımlayıcısı.");
         }
 
-        // Parametre TMDb sayısal ID'si ise ("550" gibi) doğrudan TMDb ID Çözümlemesine Gönder
         if (!identifier.startsWith("tt") && identifier.matches("\\d+")) {
             return importTmdbMovie(identifier);
         }
@@ -186,7 +202,6 @@ public class ContentServiceImpl implements ContentService {
         Content content = new Content();
         content.setImdbId(identifier);
 
-        // 1. Önce TMDB Detayı Deneyelim
         MovieDetailDto tmdbDetails = getTmdbDetailsByImdbId(identifier);
 
         if (tmdbDetails != null) {
@@ -199,7 +214,6 @@ public class ContentServiceImpl implements ContentService {
             content.setPlot(tmdbDetails.getPlot());
             content.setSource(ContentSource.OMDB);
         } else {
-            // 2. TMDB yoksa OMDb'den Import Et
             OmdbDto movie = getMovieByImdbId(identifier);
             if (movie == null || movie.getTitle() == null) {
                 throw new MovieNotFoundException("Film detayları OMDb'den alınamadı: " + identifier);
@@ -246,25 +260,20 @@ public class ContentServiceImpl implements ContentService {
         return savedContent;
     }
 
-    /**
-     * TMDb ID'si ("550") üzerinden doğrudan import yapma
-     */
     @Override
     public Content importTmdbMovie(String tmdbId) {
         if (tmdbId == null || tmdbId.isBlank()) {
             throw new MovieNotFoundException("TMDb ID boş olamaz.");
         }
 
-        // TMDb ID'den IMDb ID çözmeyi dene (tt...)
         try {
             Long numericTmdbId = Long.parseLong(tmdbId.trim());
-            String imdbId = getImdbIdFromTmdb(numericTmdbId);
+            String imdbId = getImdbIdFromTmdb(numericTmdbId, "movie");
             if (imdbId != null && !imdbId.isBlank()) {
-                return importMovie(imdbId); // Ana akışa devret
+                return importMovie(imdbId);
             }
         } catch (NumberFormatException ignored) {}
 
-        // IMDb ID bulunamazsa TMDb Direct Fallback Kaydı
         String fallbackImdbId = "tmdb-" + tmdbId.trim();
         if (repository.existsByImdbId(fallbackImdbId)) {
             throw new MovieAlreadyExistsException("Bu içerik zaten kayıtlı.");
@@ -309,9 +318,6 @@ public class ContentServiceImpl implements ContentService {
         throw new MovieNotFoundException("Film bulunamadı.");
     }
 
-    /**
-     * OMDb / IMDb ID Listesi için Toplu Import (Hata Toleranslı)
-     */
     @Override
     @Transactional
     public List<Content> importBulkMovies(List<String> imdbIds) {
@@ -326,7 +332,6 @@ public class ContentServiceImpl implements ContentService {
                 continue;
             }
             try {
-                // Veritabanında zaten varsa atla, tüm süreci durdurma
                 if (repository.existsByImdbId(imdbId)) {
                     System.out.println("Zaten kayıtlı, atlanıyor: " + imdbId);
                     continue;
@@ -338,7 +343,6 @@ public class ContentServiceImpl implements ContentService {
             } catch (MovieAlreadyExistsException e) {
                 System.out.println("Zaten var olan film atlandı: " + imdbId);
             } catch (Exception e) {
-                // Tekil film patlarsa hatayı konsola basıp sıradakine geç
                 System.err.println("Toplu Aktarım Hatası (" + imdbId + "): " + e.getMessage());
             }
         }
@@ -346,9 +350,6 @@ public class ContentServiceImpl implements ContentService {
         return contentsToSave;
     }
 
-    /**
-     * TMDb ID Listesi için Toplu Import (Hata Toleranslı)
-     */
     @Override
     @Transactional
     public List<Content> importBulkTmdbMovies(List<String> tmdbIds) {
@@ -620,13 +621,11 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public MovieDetailDto getOmdbDetails(String imdbId) {
-        // 1. Önce TMDB'den veriyi çekmeyi dene
         MovieDetailDto tmdbDto = getTmdbDetailsByImdbId(imdbId);
         if (tmdbDto != null) {
             return tmdbDto;
         }
 
-        // 2. TMDB başarısız olursa OMDb'ye düş (Fallback)
         OmdbDto movie = getMovieByImdbId(imdbId);
         if (movie == null) {
             return null;
@@ -673,11 +672,11 @@ public class ContentServiceImpl implements ContentService {
         return null;
     }
 
-    // TMDB ID'sinden IMDb ID elde eden yardımcı metot
-    private String getImdbIdFromTmdb(Long tmdbId) {
+    private String getImdbIdFromTmdb(Long tmdbId, String mediaType) {
         if (tmdbId == null || tmdbApiKey == null || tmdbApiKey.isBlank()) return null;
         try {
-            String url = tmdbBaseUrl + "/movie/" + tmdbId + "?api_key=" + tmdbApiKey;
+            String endpoint = "tv".equalsIgnoreCase(mediaType) ? "/tv/" : "/movie/";
+            String url = tmdbBaseUrl + endpoint + tmdbId + "/external_ids?api_key=" + tmdbApiKey;
             Map<?, ?> response = restClient.get().uri(url).retrieve().body(Map.class);
             if (response != null && response.containsKey("imdb_id")) {
                 return (String) response.get("imdb_id");
@@ -686,7 +685,6 @@ public class ContentServiceImpl implements ContentService {
         return null;
     }
 
-    // TMDB'den IMDb ID yardımıyla detay çeken özel yardımcı metot
     private MovieDetailDto getTmdbDetailsByImdbId(String imdbId) {
         if (tmdbApiKey == null || tmdbApiKey.isBlank() || imdbId == null || !imdbId.startsWith("tt")) {
             return null;
@@ -694,39 +692,46 @@ public class ContentServiceImpl implements ContentService {
         try {
             String url = tmdbBaseUrl + "/find/" + imdbId + "?api_key=" + tmdbApiKey + "&external_source=imdb_id";
             Map<?, ?> response = restClient.get().uri(url).retrieve().body(Map.class);
-            if (response != null && response.containsKey("movie_results")) {
+
+            if (response != null) {
                 List<?> movies = (List<?>) response.get("movie_results");
-                if (!movies.isEmpty()) {
-                    Map<?, ?> movie = (Map<?, ?>) movies.get(0);
+                List<?> tvShows = (List<?>) response.get("tv_results");
 
-                    OmdbDto omdbFallback = getMovieByImdbId(imdbId);
-                    if (omdbFallback != null && omdbFallback.getTitle() != null) {
-                        return null;
-                    }
+                Map<?, ?> item = null;
+                String type = "movie";
 
+                if (movies != null && !movies.isEmpty()) {
+                    item = (Map<?, ?>) movies.get(0);
+                    type = "movie";
+                } else if (tvShows != null && !tvShows.isEmpty()) {
+                    item = (Map<?, ?>) tvShows.get(0);
+                    type = "series";
+                }
+
+                if (item != null) {
                     MovieDetailDto dto = new MovieDetailDto();
                     dto.setImdbId(imdbId);
-                    dto.setTitle((String) movie.get("title"));
-                    dto.setPlot((String) movie.get("overview"));
+                    dto.setTitle((String) item.get("movie".equals(type) ? "title" : "name"));
+                    dto.setPlot((String) item.get("overview"));
 
-                    String posterPath = (String) movie.get("poster_path");
+                    String posterPath = (String) item.get("poster_path");
                     if (posterPath != null) {
                         dto.setPoster(tmdbImageBaseUrl + posterPath);
                     }
 
-                    Object voteAvg = movie.get("vote_average");
+                    Object voteAvg = item.get("vote_average");
                     if (voteAvg != null) {
                         dto.setRating(Double.parseDouble(voteAvg.toString().trim()));
                     }
 
-                    String releaseDate = (String) movie.get("release_date");
-                    if (releaseDate != null && releaseDate.contains("-")) {
+                    String date = (String) item.get("movie".equals(type) ? "release_date" : "first_air_date");
+                    if (date != null && date.contains("-")) {
                         try {
-                            dto.setYear(Integer.parseInt(releaseDate.split("-")[0].trim()));
+                            dto.setYear(Integer.parseInt(date.split("-")[0].trim()));
                         } catch (Exception ignored) {}
                     }
 
-                    dto.setType("movie");
+                    dto.setType(type);
                     dto.setSource("EXTERNAL_API");
                     return dto;
                 }
