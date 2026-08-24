@@ -213,6 +213,11 @@ async function generateShowcase() {
         return;
     }
 
+    if (!userId) {
+        alert('Aktif kullanıcı ID bulunamadı.');
+        return;
+    }
+
     const loading = document.getElementById('loading');
     const previewCard = document.getElementById('previewCard');
 
@@ -220,7 +225,7 @@ async function generateShowcase() {
     if (previewCard) previewCard.classList.add('hidden');
 
     try {
-        const targetUrl = `${BASE_URL}/suggest?city=${encodeURIComponent(city)}&userId=${userId}`;
+        const targetUrl = `${BASE_URL}/suggest?userId=${encodeURIComponent(userId)}&city=${encodeURIComponent(city)}`;
         const res = await fetch(targetUrl, {
             method: 'GET',
             headers: getAuthHeaders()
@@ -232,7 +237,7 @@ async function generateShowcase() {
         }
 
         if (!res.ok) {
-            throw new Error(`Sunucu hatası: ${res.status} - ${res.statusText}`);
+            throw new Error(`Sunucu hatası: ${res.status}`);
         }
 
         const data = await res.json();
