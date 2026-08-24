@@ -34,30 +34,33 @@ function renderAdminDetailsPage(data) {
 
     // --- 1. ÜST BİLGİLER ---
     const posterImg = document.querySelector(".content-poster img") || document.querySelector("img");
-    if (posterImg && (data.poster || data.posterUrl)) {
-        posterImg.src = data.poster || data.posterUrl;
+    // Java DTO/Entity modelinde poster alanı 'poster' veya büyük harf 'Poster' dönebilir
+    if (posterImg && (data.poster || data.Poster)) {
+        posterImg.src = data.poster || data.Poster;
     }
 
-    setAdminText("detailTitle", data.title || data.name);
-    setAdminText("detailYear", data.releaseYear || data.year || (data.firstAirDate ? data.firstAirDate.substring(0, 4) : null));
-    setAdminText("detailImdb", data.imdbRating || data.voteAverage || data.rating);
+    setAdminText("detailTitle", data.title);
+    setAdminText("detailYear", data.year);
+    setAdminText("detailImdb", data.rating);
 
-    const genreVal = Array.isArray(data.genres) ? data.genres.map(g => g.name || g).join(", ") : (data.genre || data.category);
-    setAdminText("detailGenre", genreVal);
+    // Java entity'sinde genre string olarak tutuluyor
+    setAdminText("detailGenre", data.genre);
 
-    const durationVal = data.durationMinutes || data.duration || data.runtime;
-    setAdminText("detailDuration", durationVal ? `${durationVal} dk` : null);
+    setAdminText("detailDuration", data.runtime ? `${data.runtime}` : null);
 
     setAdminText("detailDirector", data.director);
-    setAdminText("detailWriter", data.writer || data.creator);
+    setAdminText("detailWriter", data.writer);
 
-    const castVal = Array.isArray(data.cast) ? data.cast.map(c => c.name || c).join(", ") : (data.cast || data.actors);
-    setAdminText("detailCast", castVal);
+    // Oyuncular (Actors) entity listesinden string'e dönüştürülüyor veya doğrudan gelebiliyor
+    const actorsVal = Array.isArray(data.actors) ? data.actors.map(a => a.name || a).join(", ") : data.actors;
+    setAdminText("detailCast", actorsVal);
 
-    setAdminText("detailCountry", Array.isArray(data.country) ? data.country.join(", ") : data.country);
-    setAdminText("detailLanguage", Array.isArray(data.language) ? data.language.join(", ") : data.language);
+    setAdminText("detailCountry", data.country);
+    setAdminText("detailLanguage", data.language);
     setAdminText("detailAwards", data.awards);
-    setAdminText("detailDescription", data.description || data.overview || data.synopsis);
+    
+    // Java tarafında açıklama alanı 'plot' olarak tanımlı
+    setAdminText("detailDescription", data.plot || data.description);
 
     // --- 2. SEZONLAR, FRAGMAN KARTLARI VE AKORDEON ---
     renderAccordionSeasonsWithTrailers(data);
