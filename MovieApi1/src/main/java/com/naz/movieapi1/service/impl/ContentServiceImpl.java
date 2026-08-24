@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ContentServiceImpl implements ContentService {
@@ -62,6 +63,43 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public List<Content> getAll() {
         return repository.findAll();
+    }
+
+    @Override
+    public List<MovieDetailDto> getAllDetails() {
+        return repository.findAll().stream()
+                .map(this::mapToMovieDetailDto)
+                .collect(Collectors.toList());
+    }
+
+    private MovieDetailDto mapToMovieDetailDto(Content content) {
+        MovieDetailDto dto = new MovieDetailDto();
+        dto.setId(content.getId());
+        dto.setImdbId(content.getImdbId());
+        dto.setTitle(content.getTitle());
+        dto.setYear(content.getYear());
+        dto.setType(content.getType());
+        dto.setRating(content.getRating());
+        dto.setPoster(content.getPoster());
+        dto.setGenre(content.getGenre());
+        dto.setRuntime(content.getRuntime());
+        dto.setDirector(content.getDirector());
+
+        String actors = "";
+        if (content.getActors() != null && !content.getActors().isEmpty()) {
+            actors = content.getActors().stream()
+                    .map(Actor::getName)
+                    .collect(Collectors.joining(", "));
+        }
+
+        dto.setActors(actors);
+        dto.setPlot(content.getPlot());
+        dto.setLanguage(content.getLanguage());
+        dto.setCountry(content.getCountry());
+        dto.setAwards(content.getAwards());
+        dto.setStatus(content.getStatus());
+        dto.setSource("DATABASE");
+        return dto;
     }
 
     public Content getById(Integer id) {
@@ -646,34 +684,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public MovieDetailDto getDetails(Integer id) {
         Content content = getById(id);
-        MovieDetailDto dto = new MovieDetailDto();
-
-        dto.setId(content.getId());
-        dto.setImdbId(content.getImdbId());
-        dto.setTitle(content.getTitle());
-        dto.setYear(content.getYear());
-        dto.setType(content.getType());
-        dto.setRating(content.getRating());
-        dto.setPoster(content.getPoster());
-        dto.setGenre(content.getGenre());
-        dto.setRuntime(content.getRuntime());
-        dto.setDirector(content.getDirector());
-
-        String actors = content.getActors()
-                .stream()
-                .map(Actor::getName)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse("");
-
-        dto.setActors(actors);
-        dto.setPlot(content.getPlot());
-        dto.setLanguage(content.getLanguage());
-        dto.setCountry(content.getCountry());
-        dto.setAwards(content.getAwards());
-        dto.setStatus(content.getStatus());
-        dto.setSource("DATABASE");
-
-        return dto;
+        return mapToMovieDetailDto(content);
     }
 
     @Override

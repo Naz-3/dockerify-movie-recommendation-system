@@ -8,12 +8,12 @@ import com.naz.movieapi1.entity.Content;
 import com.naz.movieapi1.dto.SeasonDto;
 import com.naz.movieapi1.dto.details.MovieDetailDto;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public interface ContentService {
 
     List<Content> getAll();
+    List<MovieDetailDto> getAllDetails(); // Yeni metot eklendi
     Content getById(Integer id);
     Content save(Content content);
     void delete(Integer id);
