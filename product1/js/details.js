@@ -1,22 +1,16 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    // 1. URL'den id parametresini al (Örn: content-details.html?id=30)
     const urlParams = new URLSearchParams(window.location.search);
     const contentId = urlParams.get("id");
 
     if (!contentId) {
-        console.error("URL üzerinde 'id' parametresi bulunamadı.");
-        alert("Geçersiz içerik ID'si!");
+        console.error("URL'de 'id' parametresi bulunamadı.");
         return;
     }
 
-    // Token Hazırlığı
     let token = localStorage.getItem("jwtToken") || localStorage.getItem("token") || "";
-    if (token.startsWith("Bearer ")) {
-        token = token.substring(7);
-    }
+    if (token.startsWith("Bearer ")) token = token.substring(7);
 
     try {
-        // 2. API Endpoint'ine İstek At
         const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}`, {
             headers: {
                 "Authorization": token ? `Bearer ${token}` : "",
@@ -24,100 +18,65 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         });
 
-        if (!response.ok) {
-            throw new Error("İçerik verisi çekilemedi. Status: " + response.status);
-        }
+        if (!response.ok) throw new Error("Veri çekilemedi: " + response.status);
 
         const data = await response.json();
-        console.log("Backend'den Dönen İçerik Verisi:", data);
-
-        // Sayfa Alanlarını Doldur
-        renderAdminContentDetails(data);
+        renderAdminDetailsPage(data);
 
     } catch (error) {
-        console.error("Detay Yükleme Hatası:", error);
+        console.error("Hata:", error);
     }
 });
 
-function renderAdminContentDetails(data) {
+function renderAdminDetailsPage(data) {
     if (!data) return;
 
-    // --- 1. GÖRSEL VE BAŞLIK ---
-    const posterImg = document.getElementById("detailPoster") || document.querySelector(".content-poster img") || document.querySelector("img");
-    if (posterImg) {
-        posterImg.src = data.poster || data.posterUrl || data.bannerUrl || data.backdropPath || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
+    // --- 1. ÜST BİLGİ ALANLARI (ADMIN TASARIMI) ---
+    const posterImg = document.querySelector(".content-poster img") || document.querySelector("img");
+    if (posterImg && (data.poster || data.posterUrl)) {
+        posterImg.src = data.poster || data.posterUrl;
     }
 
-    setElementText(["detailTitle", "contentTitle"], data.title || data.name);
-    setElementText(["detailYear", "contentYear"], data.releaseYear || data.year || (data.firstAirDate ? data.firstAirDate.substring(0, 4) : null));
-    setElementText(["detailImdb", "contentImdb"], data.imdbRating || data.voteAverage || data.rating || data.imdbScore);
+    setAdminText("detailTitle", data.title || data.name);
+    setAdminText("detailYear", data.releaseYear || data.year || (data.firstAirDate ? data.firstAirDate.substring(0, 4) : null));
+    setAdminText("detailImdb", data.imdbRating || data.voteAverage || data.rating);
 
-    // --- 2. DETAY TABLOSU / DETAY ALANLARI (Tire Görünen Yerler) ---
-    
-    // Tür (Genre)
-    const genreVal = Array.isArray(data.genres) ? data.genres.map(g => g.name || g).join(", ") : (data.genre || data.category || data.type);
-    setElementText(["detailGenre", "contentGenre"], genreVal);
+    const genreVal = Array.isArray(data.genres) ? data.genres.map(g => g.name || g).join(", ") : (data.genre || data.category);
+    setAdminText("detailGenre", genreVal);
 
-    // Süre (Duration)
-    const durationVal = data.durationMinutes || data.duration || data.runtime || data.totalMinutes;
-    setElementText(["detailDuration", "contentDuration"], durationVal ? `${durationVal} dk` : null);
+    const durationVal = data.durationMinutes || data.duration || data.runtime;
+    setAdminText("detailDuration", durationVal ? `${durationVal} dk` : null);
 
-    // Yönetmen (Director)
-    setElementText(["detailDirector", "contentDirector"], data.director || data.directors);
+    setAdminText("detailDirector", data.director);
+    setAdminText("detailWriter", data.writer || data.creator);
 
-    // Yazar (Writer)
-    setElementText(["detailWriter", "contentWriter"], data.writer || data.writers || data.creator || data.createdBy);
+    const castVal = Array.isArray(data.cast) ? data.cast.map(c => c.name || c).join(", ") : (data.cast || data.actors);
+    setAdminText("detailCast", castVal);
 
-    // Oyuncular (Cast / Actors)
-    const castVal = Array.isArray(data.cast) ? data.cast.map(c => c.name || c).join(", ") : (data.cast || data.actors || data.starring);
-    setElementText(["detailCast", "contentCast"], castVal);
+    setAdminText("detailCountry", Array.isArray(data.country) ? data.country.join(", ") : data.country);
+    setAdminText("detailLanguage", Array.isArray(data.language) ? data.language.join(", ") : data.language);
+    setAdminText("detailAwards", data.awards);
+    setAdminText("detailDescription", data.description || data.overview || data.synopsis);
 
-    // Ülke (Country)
-    const countryVal = Array.isArray(data.country) ? data.country.join(", ") : (data.country || data.productionCountries);
-    setElementText(["detailCountry", "contentCountry"], countryVal);
+    // --- 2. SEZON VE BÖLÜM KARTLARI (EKRAN GÖRÜNTÜSÜNDEKİ TASARIM) ---
+    renderSeasonsAndEpisodes(data);
+}
 
-    // Dil (Language)
-    const langVal = Array.isArray(data.language) ? data.language.join(", ") : (data.language || data.spokenLanguages || data.originalLanguage);
-    setElementText(["detailLanguage", "contentLanguage"], langVal);
+function renderSeasonsAndEpisodes(data) {
+    let seasonsContainer = document.getElementById("seasonsContainer") || document.querySelector(".seasons-section");
 
-    // Ödüller (Awards)
-    setElementText(["detailAwards", "contentAwards"], data.awards || data.award);
-
-    // Açıklama (Description / Plot)
-    setElementText(["detailDescription", "contentDescription"], data.description || data.overview || data.summary || data.synopsis || data.plot);
-
-
-    // --- 3. SEZONLAR VE BÖLÜMLER (Boş Kalan Alanın Doldurulması) ---
-    
-    // Ekran görüntündeki "Sezonlar" yazısının altına hedefleniyoruz
-    let seasonsContainer = document.getElementById("seasonsContainer") || document.getElementById("seasonsList");
-    
-    // Eğer ID ile kapsayıcı bulunamadıysa, "Sezonlar" başlığını taşıyan elementi bulup hemen altına container ekliyoruz
     if (!seasonsContainer) {
-        const headings = Array.from(document.querySelectorAll("h2, h3, h4, div, span"));
+        const headings = Array.from(document.querySelectorAll("h2, h3, h4, span, div"));
         const seasonHeader = headings.find(el => el.innerText.trim().toLowerCase() === "sezonlar");
-        
-        if (seasonHeader) {
-            let nextContainer = seasonHeader.nextElementSibling;
-            if (!nextContainer || nextContainer.tagName !== "DIV") {
-                nextContainer = document.createElement("div");
-                seasonHeader.parentNode.insertBefore(nextContainer, seasonHeader.nextSibling);
-            }
-            seasonsContainer = nextContainer;
-            seasonsContainer.id = "seasonsContainer";
-        }
+        if (seasonHeader) seasonsContainer = seasonHeader.parentElement;
     }
 
-    if (!seasonsContainer) {
-        console.warn("Sezonlar için uygun DOM elementi bulunamadı.");
-        return;
-    }
+    if (!seasonsContainer) return;
 
-    // Backend'den Veri Çekme Kontrolleri (Dark dışındaki Scooby-Doo gibi içerikler için)
     let seasonsData = data.seasons || data.seasonList || [];
     let episodesData = data.episodes || data.episodeList || [];
 
-    // Eğer seasons boş geldiyse ama tek parça episodes geldiyse seasonNumber'a göre grupla
+    // Eğer seasons listesi yoksa ama episodes geldiyse grupla
     if ((!seasonsData || seasonsData.length === 0) && episodesData.length > 0) {
         const grouped = {};
         episodesData.forEach(ep => {
@@ -125,62 +84,77 @@ function renderAdminContentDetails(data) {
             if (!grouped[sNum]) grouped[sNum] = [];
             grouped[sNum].push(ep);
         });
-
         seasonsData = Object.keys(grouped).map(sNum => ({
-            name: `${sNum}. Sezon`,
+            name: `Season ${sNum}`,
             seasonNumber: sNum,
             episodes: grouped[sNum]
         }));
     }
 
-    // Ekran Oluşturma
     if (seasonsData && seasonsData.length > 0) {
         seasonsContainer.innerHTML = seasonsData.map((season, idx) => `
-            <div class="season-block" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-top: 12px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h4 style="color: #e50914; font-size: 16px; font-weight: 600; margin: 0;">${season.name || `${idx + 1}. Sezon`}</h4>
-                    <span style="color: #888; font-size: 12px;">${(season.episodes ? season.episodes.length : 0)} Bölüm</span>
+            <div style="background: #11141a; border: 1px solid #1e232d; border-radius: 10px; padding: 20px; margin-top: 15px; margin-bottom: 20px;">
+                <!-- Sezon Başlığı ve Toplam Bölüm Sayısı -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                    <div style="color: #9ab; font-size: 14px; font-weight: 600;">
+                        ▼ ${season.name || `Season ${idx + 1}`}
+                    </div>
+                    <div style="color: #6a7b95; font-size: 13px; font-weight: 500;">
+                        ${(season.episodes ? season.episodes.length : 0)} Bölüm
+                    </div>
                 </div>
-                <div class="episodes-list" style="display: flex; flex-direction: column; gap: 8px;">
-                    ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.3); padding: 10px 14px; border-radius: 6px; font-size: 13px; color: #ccc;">
-                            <div>
-                                <strong style="color: #fff; margin-right: 8px;">S${ep.seasonNumber || season.seasonNumber || 1}E${ep.episodeNumber || ep.episode_number || ep.episodeIndex || '-'}:</strong>
-                                <span>${ep.title || ep.name || 'Bölüm'}</span>
+
+                <!-- Bölüm Kartları Listesi -->
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => {
+                        const epTitle = ep.title || ep.name || 'Untitled Episode';
+                        const epNum = ep.episodeNumber || ep.episode_number || ep.episodeIndex || '-';
+                        const epDesc = ep.description || ep.overview || ep.summary || 'Açıklama bulunamadı.';
+                        const epRating = ep.imdbRating || ep.voteAverage || ep.rating || '7.5';
+                        const epDate = ep.airDate || ep.releaseDate || ep.formattedDate || '01 Jan 2020';
+                        const epDuration = ep.durationMinutes || ep.duration || ep.runtime || 22;
+                        const epImg = ep.stillPath || ep.image || ep.poster || data.poster || 'https://placehold.co/180x110/1e232d/ffffff?text=No+Image';
+
+                        return `
+                            <div style="display: flex; gap: 16px; background: #0b0d12; border: 1px solid #191d26; border-radius: 8px; padding: 12px; align-items: flex-start;">
+                                <!-- Sol Bölüm Görseli -->
+                                <img src="${epImg}" alt="${epTitle}" style="width: 140px; height: 90px; object-fit: cover; border-radius: 6px; flex-shrink: 0;" />
+                                
+                                <!-- Sağ Detay Bilgileri -->
+                                <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1;">
+                                    <h5 style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0;">
+                                        ${epNum}. ${epTitle}
+                                    </h5>
+                                    
+                                    <p style="color: #8a99ad; font-size: 12px; line-height: 1.4; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                        ${epDesc}
+                                    </p>
+
+                                    <!-- Bölüm Meta Bilgileri (Puan, Tarih, Süre) -->
+                                    <div style="display: flex; align-items: center; gap: 12px; font-size: 11px; color: #f5c518; margin-top: 4px;">
+                                        <span>⭐ ${epRating}</span>
+                                        <span style="color: #5a6b82;">📅 ${epDate}</span>
+                                        <span style="color: #5a6b82;">⏱️ ${epDuration} min</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div style="color: #777; font-size: 12px;">
-                                ${ep.durationMinutes || ep.duration || ep.runtime || 45} dk
-                            </div>
-                        </div>
-                    `).join('') : '<p style="color:#666; font-size:12px; margin:0;">Bu sezonda gösterilecek bölüm bulunamadı.</p>'}
+                        `;
+                    }).join('') : '<p style="color:#5a6b82; font-size:13px; margin:0;">Bu sezonda gösterilecek bölüm bulunamadı.</p>'}
                 </div>
             </div>
         `).join('');
     } else {
         seasonsContainer.innerHTML = `
-            <div style="padding: 16px; background: rgba(255,255,255,0.02); border-radius: 6px; margin-top: 12px;">
-                <p style="color: #888; font-size: 14px; margin: 0;">Bu içerik (ID: ${data.id}) için henüz veritabanında tanımlanmış sezon veya bölüm verisi bulunmuyor.</p>
+            <div style="background: #11141a; border: 1px solid #1e232d; border-radius: 8px; padding: 20px; margin-top: 15px;">
+                <p style="color: #6a7b95; font-size: 14px; margin: 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>
             </div>
         `;
     }
 }
 
-// Yardımcı Fonksiyon: HTML'deki ID'leri eşleştirip text değerlerini basar
-function setElementText(elementIds, value) {
-    let target = null;
-    for (const id of elementIds) {
-        const el = document.getElementById(id);
-        if (el) {
-            target = el;
-            break;
-        }
-    }
-
-    if (target) {
-        if (value !== undefined && value !== null && String(value).trim() !== "" && String(value).trim() !== "null") {
-            target.innerText = value;
-        } else {
-            target.innerText = "-";
-        }
+function setAdminText(elementId, value) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.innerText = (value && String(value).trim() !== "" && String(value).trim() !== "null") ? value : "-";
     }
 }
