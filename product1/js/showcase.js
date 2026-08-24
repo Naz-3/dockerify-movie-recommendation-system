@@ -225,7 +225,7 @@ async function generateShowcase() {
     if (previewCard) previewCard.classList.add('hidden');
 
     try {
-        const targetUrl = `${BASE_URL}/suggest?userId=${encodeURIComponent(userId)}&city=${encodeURIComponent(city)}`;
+        const targetUrl = `${BASE_URL}/generate-suggestion?userId=${encodeURIComponent(userId)}&city=${encodeURIComponent(city)}`;
         const res = await fetch(targetUrl, {
             method: 'GET',
             headers: getAuthHeaders()

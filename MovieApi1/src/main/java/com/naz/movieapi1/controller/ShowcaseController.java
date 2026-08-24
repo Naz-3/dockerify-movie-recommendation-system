@@ -12,10 +12,7 @@ import com.naz.movieapi1.dto.showcase.ShowcaseApproveRequest;
 import java.time.LocalDate;
 import java.util.List;
 
-@CrossOrigin(origins = {
-        "http://127.0.0.1:5500",
-        "http://localhost:5500"
-})
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1/showcases")
 public class ShowcaseController {
