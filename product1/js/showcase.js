@@ -1,5 +1,4 @@
 const BASE_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases';
-const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
 let currentShowcaseId = null;
 
 const defaultCities = [
@@ -100,108 +99,6 @@ function parseWeatherData(rawWeatherText) {
     return { icon: matched.icon, text: matched.text, temp, humidity };
 }
 
-async function fetchRealMoviePoster(title) {
-    if (!title) return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
-    
-    try {
-        const response = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=3fd2be6f0c70a2a598f084ddfb75487c&query=${encodeURIComponent(title)}&language=tr-TR`);
-        if (!response.ok) throw new Error();
-        
-        const data = await response.json();
-        if (data && data.results && data.results.length > 0) {
-            const found = data.results.find(item => item.poster_path);
-            if (found && found.poster_path) {
-                return `https://image.tmdb.org/t/p/w500${found.poster_path}`;
-            }
-        }
-    } catch (e) {
-        console.warn("TMDB Poster çekme hatası:", title);
-    }
-    
-    return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
-}
-
-function ensureDetailModalExists() {
-    if (document.getElementById('movieDetailModal')) return;
-
-    const modalHTML = `
-        <div id="movieDetailModal" class="movie-modal-overlay hidden">
-            <div class="movie-modal-content">
-                <button class="modal-close-btn" onclick="closeMovieDetails()">✕</button>
-                <div class="modal-body-wrapper">
-                    <img id="modalPoster" src="" alt="Poster" />
-                    <div class="modal-info">
-                        <h3 id="modalTitle">Film Adı</h3>
-                        <div id="modalMeta" class="modal-meta-badges"></div>
-                        <p id="modalDescription">AI analizi...</p>
-                        <div class="modal-actions">
-                            <button id="modalAddToListBtn" class="btn-primary" onclick="addCurrentMovieToWatchlist()">🎬 Listeme Ekle</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-let activeModalMovie = null;
-
-function openMovieDetails(title, rating, genre, duration, posterUrl) {
-    ensureDetailModalExists();
-    activeModalMovie = { title, rating, genre, duration, posterUrl };
-
-    document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalPoster').src = posterUrl;
-    document.getElementById('modalMeta').innerHTML = `<span>⭐ ${rating}</span> <span>🎭 ${genre}</span> <span>⏱️ ${duration} dk</span>`;
-    document.getElementById('modalDescription').innerText = `"${title}" içeriği, yapay zeka direktörümüz tarafından mevcut hava koşullarınız ve geçmiş izleme tercihleriniz analiz edilerek bu hafta için özel olarak önerilmiştir.`;
-    
-    document.getElementById('movieDetailModal').classList.remove('hidden');
-}
-
-function closeMovieDetails() {
-    const modal = document.getElementById('movieDetailModal');
-    if (modal) modal.classList.add('hidden');
-}
-
-async function addCurrentMovieToWatchlist() {
-    if (!activeModalMovie) {
-        alert("Eklenecek içerik bulunamadı!");
-        return;
-    }
-
-    const userId = getActiveUserId();
-    const token = localStorage.getItem("jwtToken");
-    
-    try {
-        let response = await fetch(`https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users/${userId}/watchlist`, {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": token ? `Bearer ${token}` : ""
-            },
-            body: JSON.stringify({
-                title: activeModalMovie.title,
-                genre: activeModalMovie.genre,
-                rating: activeModalMovie.rating,
-                duration: activeModalMovie.duration,
-                posterUrl: activeModalMovie.posterUrl,
-                userId: userId
-            })
-        });
-
-        if (response.ok) {
-            alert(`🎉 "${activeModalMovie.title}" başarıyla listenize eklendi!`);
-            closeMovieDetails();
-        } else {
-            alert(`"${activeModalMovie.title}" listenize eklenirken bir hata oluştu.`);
-        }
-    } catch (err) {
-        console.warn("Watchlist hata:", err);
-        alert("Sunucuya bağlanılamadı.");
-    }
-}
-
 async function generateShowcase() {
     const cityInput = document.getElementById('cityInput');
     const city = cityInput ? cityInput.value.trim() : '';
@@ -225,7 +122,7 @@ async function generateShowcase() {
     if (previewCard) previewCard.classList.add('hidden');
 
     try {
-        const targetUrl = `${BASE_URL}/generate-suggestion?userId=${encodeURIComponent(userId)}&city=${encodeURIComponent(city)}`;
+        const targetUrl = `${BASE_URL}/suggest?userId=${encodeURIComponent(userId)}&city=${encodeURIComponent(city)}`;
         const res = await fetch(targetUrl, {
             method: 'GET',
             headers: getAuthHeaders()
@@ -271,40 +168,22 @@ async function generateShowcase() {
             const movieItems = data.movieTitles || data.contents || data.movies || [];
 
             if (Array.isArray(movieItems) && movieItems.length > 0) {
-                for (let index = 0; index < movieItems.length; index++) {
-                    const movie = movieItems[index];
+                movieItems.forEach((movie, index) => {
                     const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
-                    
-                    let posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl)) 
-                        ? (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl) 
-                        : null;
-
-                    if (!posterUrl) {
-                        posterUrl = await fetchRealMoviePoster(title);
-                    }
-
                     const rating = movie.rating || '8.4';
                     const genre = movie.genre || 'Fantastik / Macera';
                     const duration = movie.durationInMinutes || movie.duration || '135';
 
                     const card = document.createElement('div');
                     card.className = 'movie-card';
-                    
-                    card.addEventListener('click', () => {
-                        openMovieDetails(title, rating, genre, duration, posterUrl);
-                    });
-
                     card.innerHTML = `
-                        <div class="movie-poster-container">
-                            <img src="${posterUrl}" alt="${title}" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop'" />
-                        </div>
                         <div class="movie-card-content">
                             <div>
                                 <div class="movie-header">
                                     <span class="movie-number">#${index + 1} Öneri</span>
                                     <span class="movie-rating">⭐ ${rating}</span>
                                 </div>
-                                <div class="movie-title" title="${title}">${title}</div>
+                                <div class="movie-title">${title}</div>
                                 <div class="movie-meta">
                                     <span>🎭 ${genre}</span>
                                     <span>⏱️ ${duration} dk</span>
@@ -321,7 +200,7 @@ async function generateShowcase() {
                         </div>
                     `;
                     movieGrid.appendChild(card);
-                }
+                });
             } else {
                 movieGrid.innerHTML = '<p class="no-content-alert">⚠️ Bu kriterlere uygun vitrin içeriği bulunamadı.</p>';
             }
@@ -344,7 +223,7 @@ async function approveShowcase() {
     }
 
     try {
-        const response = await fetch(`${BASE_URL}/${currentShowcaseId}/approve`, {
+        const response =- await fetch(`${BASE_URL}/${currentShowcaseId}/approve`, {
             method: 'POST',
             headers: getAuthHeaders()
         });
