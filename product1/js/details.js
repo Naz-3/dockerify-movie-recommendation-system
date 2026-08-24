@@ -80,21 +80,39 @@ function renderAccordionSeasonsWithTrailers(data) {
 
     if (!seasonsContainer) return;
 
-    let seasonsData = data.seasons || data.seasonList || [];
-    let episodesData = data.episodes || data.episodeList || [];
+    // Backend'den gelen olası sezon, bölüm veya video listelerini alalım
+    let seasonsData = data.seasons || data.seasonList || data.seasonsList || data.contentSeasons || [];
+    let episodesData = data.episodes || data.episodeList || data.episodesList || [];
+    let globalVideos = data.videos || data.trailers || [];
 
-    if ((!seasonsData || seasonsData.length === 0) && episodesData.length > 0) {
-        const grouped = {};
-        episodesData.forEach(ep => {
-            const sNum = ep.seasonNumber || ep.season_number || ep.season || 1;
-            if (!grouped[sNum]) grouped[sNum] = [];
-            grouped[sNum].push(ep);
-        });
-        seasonsData = Object.keys(grouped).map(sNum => ({
-            name: `${sNum}. Sezon`,
-            seasonNumber: sNum,
-            episodes: grouped[sNum]
-        }));
+    // Eğer hiç sezon yok ama global videolar (konsolda gördüğümüz 'videos' dizisi) varsa, 
+    // bunları otomatik olarak "1. Sezon" ve altındaki videolar/fragmanlar haline getirelim.
+    if ((!seasonsData || seasonsData.length === 0) && globalVideos.length > 0) {
+        seasonsData = [
+            {
+                name: "1. Sezon",
+                seasonNumber: 1,
+                trailers: globalVideos.map(v => ({
+                    title: v.name || v.title || "Video",
+                    videoUrl: v.key ? `https://www.youtube.com/embed/${v.key}` : (v.url || v.videoUrl),
+                    thumbnailUrl: v.key ? `https://img.youtube.com/vi/${v.key}/hqdefault.jpg` : data.poster,
+                    type: v.type || "Trailer"
+                })),
+                episodes: [] // Bölüm yoksa boş bırakıyoruz, kullanıcı yeni medya ekleyebilir
+            }
+        ];
+    }
+
+    // Eğer hala sezon verisi oluşmadıysa ama içerik bir series/movie ise boş bir 1. Sezon oluşturalım ki kullanıcı "Yeni Medya Ekle" diyebilsin
+    if (!seasonsData || seasonsData.length === 0) {
+        seasonsData = [
+            {
+                name: "1. Sezon",
+                seasonNumber: 1,
+                trailers: [],
+                episodes: []
+            }
+        ];
     }
 
     const defaultDarkTrailerKey = "acJWpZvYNK0";
@@ -103,7 +121,7 @@ function renderAccordionSeasonsWithTrailers(data) {
         seasonsContainer.innerHTML = seasonsData.map((season, idx) => {
             const isFirst = idx === 0;
             const seasonId = `season-content-${idx}`;
-            const seasonTrailers = season.trailers || season.videos || data.trailers || [];
+            const seasonTrailers = season.trailers || season.videos || [];
 
             return `
                 <div class="season-item">
@@ -112,7 +130,7 @@ function renderAccordionSeasonsWithTrailers(data) {
                     <div class="season-header" onclick="toggleSeasonAccordion('${seasonId}', this)">
                         <span>
                             <span class="arrow-icon" style="display: inline-block; transition: transform 0.2s; transform: ${isFirst ? 'rotate(0deg)' : 'rotate(-90deg)'};">▼</span> 
-                            ${season.name || `${idx + 1}. Sezon`}
+                            ${season.name || season.title || `${idx + 1}. Sezon`}
                         </span>
                         <span style="color: var(--text2); font-size: 13px; font-weight: 500;">
                             ${(season.episodes ? season.episodes.length : 0)} Bölüm
@@ -143,7 +161,7 @@ function renderAccordionSeasonsWithTrailers(data) {
                                         </div>
                                     </div>
                                 `).join('') : `
-                                    <div class="video-card" onclick="openVideoModal('https://www.youtube.com/embed/${defaultDarkTrailerKey}', '${season.name} Fragman')">
+                                    <div class="video-card" onclick="openVideoModal('https://www.youtube.com/embed/${defaultDarkTrailerKey}', '${season.name || 'Sezon'} Fragman')">
                                         <div class="video-thumbnail-container">
                                             <img src="${data.poster || data.posterUrl || 'https://placehold.co/200x110/222/fff?text=Trailer'}" class="video-thumbnail" style="opacity: 0.8;" />
                                             <div class="play-overlay">
@@ -151,7 +169,7 @@ function renderAccordionSeasonsWithTrailers(data) {
                                             </div>
                                         </div>
                                         <div class="video-card-body">
-                                            <div class="video-card-title">${season.name} Fragman</div>
+                                            <div class="video-card-title">${season.name || 'Sezon'} Fragman</div>
                                             <span class="video-card-badge">Fragman</span>
                                         </div>
                                     </div>
@@ -197,12 +215,6 @@ function renderAccordionSeasonsWithTrailers(data) {
                 </div>
             `;
         }).join('');
-    } else {
-        seasonsContainer.innerHTML = `
-            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 25px; margin-top: 15px;">
-                <p style="color: var(--text2); font-size: 14px; margin: 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>
-            </div>
-        `;
     }
 }
 
