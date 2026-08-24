@@ -1,5 +1,5 @@
-const BASE_URL = 'https://dockerify-movie-recommendation-system.onrender.com/api/v1/showcases';
-const USERS_URL = 'https://dockerify-movie-recommendation-system.onrender.com/api/users';
+const BASE_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases';
+const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
 let currentShowcaseId = null;
 
 // Popüler Türkiye & Dünya Şehirleri Listesi
@@ -23,7 +23,6 @@ const defaultCities = [
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Mobil menü
     const menuToggle = document.getElementById("menuToggle");
     const sidebar = document.querySelector(".sidebar");
 
@@ -33,7 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // Sayfa dışı tıklamada mobil sidebar'ı kapat
     document.addEventListener("click", (e) => {
         if (sidebar && sidebar.classList.contains("mobile-open")) {
             if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
@@ -42,13 +40,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    // 1. Kullanıcı adını localStorage'daki olası tüm anahtarlardan arayalım
     let activeUser = localStorage.getItem("username") || 
                      localStorage.getItem("activeUsername") || 
                      localStorage.getItem("user") || 
                      localStorage.getItem("name");
 
-    // 2. Eğer hiçbir yerde kayıtlı değilse ama JWT Token varsa, token'ı okumayı deneyelim
     if (!activeUser) {
         const token = localStorage.getItem("jwtToken");
         if (token) {
@@ -61,10 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 const payload = JSON.parse(jsonPayload);
                 activeUser = payload.sub || payload.username || payload.name || payload.email || "Admin";
-                
                 localStorage.setItem("username", activeUser);
             } catch (e) {
-                console.error("Token çözülemedi:", e);
                 activeUser = "Admin";
             }
         } else {
@@ -72,13 +66,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 3. Ekrandaki etikete kullanıcı adını doğrudan yazdıralım
     const userDisplay = document.getElementById("activeUsernameDisplay");
     if (userDisplay) {
         userDisplay.textContent = activeUser;
     }
 
-    // 4. AI Vitrin İsteği Atılırken generateShowcase fonksiyonunu çağır
     const generateBtn = document.getElementById("generateBtn");
     if (generateBtn) {
         generateBtn.addEventListener("click", () => {
@@ -86,11 +78,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Şehir Datalist'ini Doldur
     populateCityList();
 });
 
-// JWT Token alma yardımcı fonksiyonu
 function getAuthHeaders() {
     const token = localStorage.getItem("jwtToken");
     return {
@@ -99,7 +89,6 @@ function getAuthHeaders() {
     };
 }
 
-// Oturum Koruma (Auth Guard)
 function checkAuthGuard() {
     const token = localStorage.getItem("jwtToken");
     if (!token) {
@@ -107,10 +96,8 @@ function checkAuthGuard() {
     }
 }
 
-// Oturum durumunu ve arayüzü kontrol eden fonksiyon
 function checkAuthStatus() {
     const activeUsername = localStorage.getItem("username") || localStorage.getItem("activeUsername");
-
     const loginNavBtn = document.getElementById("loginNavBtn");
     const userProfileBar = document.getElementById("userProfileBar");
     const welcomeUserText = document.getElementById("welcomeUserText");
@@ -125,16 +112,13 @@ function checkAuthStatus() {
     }
 }
 
-// Oturumu kapatıp login sayfasına yönlendiren fonksiyon
 function logout() {
     localStorage.clear();
     window.location.href = "login.html";
 }
 
-// Veritabanındaki kullanıcıları dropdown'a yükleyen fonksiyon
 async function loadUsersDropdown() {
     const userSelect = document.getElementById('userSelect');
-    
     try {
         const response = await fetch(USERS_URL, {
             method: 'GET',
@@ -142,18 +126,15 @@ async function loadUsersDropdown() {
         });
 
         if (response.status === 401 || response.status === 403) {
-            alert("Oturum süreniz doldu veya yetkiniz yok. Lütfen tekrar giriş yapın.");
             logout();
             return;
         }
 
-        if (!response.ok) throw new Error(`Kullanıcılar getirilemedi. HTTP Status: ${response.status}`);
-
+        if (!response.ok) throw new Error();
         const users = await response.json();
 
         if (userSelect) {
             userSelect.innerHTML = '';
-
             if (!Array.isArray(users) || users.length === 0) {
                 userSelect.innerHTML = '<option value="">Kullanıcı Bulunamadı</option>';
                 return;
@@ -163,66 +144,21 @@ async function loadUsersDropdown() {
             users.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user.id;
-
                 const name = user.username || user.fullName || user.name || user.email || `Kullanıcı #${user.id}`;
-                const city = user.city ? ` (${user.city})` : '';
-
-                option.textContent = `${name}${city}`;
+                option.textContent = name + (user.city ? ` (${user.city})` : '');
                 option.dataset.city = user.city || '';
-
-                if (activeUserId && user.id == activeUserId) {
-                    option.selected = true;
-                }
-
+                if (activeUserId && user.id == activeUserId) option.selected = true;
                 userSelect.appendChild(option);
             });
-
-            const selectedOpt = userSelect.options[userSelect.selectedIndex];
-            if (selectedOpt && selectedOpt.dataset.city) {
-                const cityInput = document.getElementById('cityInput');
-                if (cityInput) cityInput.value = selectedOpt.dataset.city;
-            }
         }
     } catch (error) {
-        console.error('Kullanıcı yükleme hatası:', error);
-        if (userSelect) {
-            userSelect.innerHTML = '<option value="">Yükleme Başarısız!</option>';
-        }
-    }
-}
-
-// Kullanıcı dropdown seçimi değiştiğinde çalışan tetikleyici
-function onUserChange(e) {
-    const userSelect = e.target;
-    const selectedOption = userSelect.options[userSelect.selectedIndex];
-
-    if (selectedOption && selectedOption.value) {
-        const userId = userSelect.value;
-        const userName = selectedOption.text.split(' (')[0];
-        const userCity = selectedOption.dataset.city;
-
-        localStorage.setItem('activeUserId', userId);
-        localStorage.setItem('username', userName);
-
-        const userDisplay = document.getElementById("activeUsernameDisplay");
-        if (userDisplay) {
-            userDisplay.textContent = userName;
-        }
-
-        if (userCity) {
-            const cityInput = document.getElementById('cityInput');
-            if (cityInput) cityInput.value = userCity;
-        }
-
-        checkAuthStatus();
+        console.error(error);
     }
 }
 
 function getActiveUserId() {
     const userSelect = document.getElementById('userSelect');
-    if (userSelect && userSelect.value) {
-        return userSelect.value;
-    }
+    if (userSelect && userSelect.value) return userSelect.value;
     return localStorage.getItem('activeUserId') || '1';
 }
 
@@ -237,15 +173,12 @@ function getActiveUserName() {
 function populateCityList() {
     const datalist = document.getElementById('cityList');
     if (datalist) {
-        datalist.innerHTML = defaultCities
-            .map(city => `<option value="${city}"></option>`)
-            .join('');
+        datalist.innerHTML = defaultCities.map(city => `<option value="${city}"></option>`).join('');
     }
 }
 
 function parseWeatherData(rawWeatherText) {
     if (!rawWeatherText) return { icon: '🌤️', text: 'Bilinmiyor', temp: '--', humidity: '--' };
-
     const parts = rawWeatherText.split('|').map(s => s.trim());
     const mainCondition = parts[0] || 'Clear';
     const temp = parts[1] || '';
@@ -261,55 +194,40 @@ function parseWeatherData(rawWeatherText) {
     };
 
     const matched = conditionMap[mainCondition] || { text: mainCondition, icon: '🌤️' };
-
-    return {
-        icon: matched.icon,
-        text: matched.text,
-        temp: temp,
-        humidity: humidity
-    };
+    return { icon: matched.icon, text: matched.text, temp, humidity };
 }
 
-// Her film/dizi için doğru ve benzersiz poster getiren dinamik eşleme fonksiyonu
+// Film adına göre kesin eşleşen orijinal posterler
 function getFallbackPoster(title) {
     if (!title) return 'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg';
     
     const t = title.toLowerCase();
     
-    // Spesifik ve doğru poster eşleştirmeleri
+    if (t.includes('dark knight')) return 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg';
+    if (t.includes('super mario')) return 'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg';
+    if (t.includes('dead poets society')) return 'https://image.tmdb.org/t/p/w500/aiunwpcKNwrmr6W5cmuw7vG415K.jpg';
+    if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
+    if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg';
+    if (t.includes('regular show')) return 'https://image.tmdb.org/t/p/w500/mCZ8NJyOuzwwbsk8rGnsiN6rG3K.jpg';
+    if (t.includes('house of the dragon')) return 'https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg';
+    if (t.includes('spider-man') || t.includes('no way home')) return 'https://image.tmdb.org/t/p/w500/uJQdGWDHYMrWOBQvDkHDAFgUxCU.jpg';
     if (t.includes('chamber of secrets')) return 'https://image.tmdb.org/t/p/w500/sdEOIxX83WVDSRh8xWMS8cURRBn.jpg';
     if (t.includes('goblet of fire')) return 'https://image.tmdb.org/t/p/w500/fECBtHhrPPkt8ThWyavdMHAJRdl.jpg';
-    if (t.includes('philosopher') || t.includes('sorcerer')) return 'https://image.tmdb.org/t/p/w500/wuMc08IPKEatf9rnMNXvIDxqP4W.jpg';
-    if (t.includes('scooby')) return 'https://image.tmdb.org/t/p/w500/35z8GuIOarOQzWk1m719a69gQ5g.jpg';
-    if (t.includes('batman')) return 'https://image.tmdb.org/t/p/w500/covqqqcdGNWz8DV15zeCWzOXvR0.jpg';
-    if (t.includes('13 reasons')) return 'https://image.tmdb.org/t/p/w500/iJc5q5F1pU4tLqB7w6n9n4m3p0a.jpg';
-    if (t.includes('house of the dragon')) return 'https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg';
-    if (t.includes('dead poets society')) return 'https://image.tmdb.org/t/p/w500/aiunwpcKNwrmr6W5cmuw7vG415K.jpg';
-    if (t.includes('dark wolf') || t.includes('terminal list')) return 'https://image.tmdb.org/t/p/w500/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg';
-    if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg';
-    if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
-    if (t.includes('spider-man') || t.includes('no way home')) return 'https://image.tmdb.org/t/p/w500/uJQdGWDHYMrWOBQvDkHDAFgUxCU.jpg';
-    if (t.includes('super mario')) return 'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg';
     
-    // Listede olmayan diğer tüm filmler için geniş havuzdan kararlı seçim
     const genericPosters = [
         'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg',
         'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
         'https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg',
-        'https://image.tmdb.org/t/p/w500/gKkl37BQuKTanygYQG1pyYgLVgf.jpg',
-        'https://image.tmdb.org/t/p/w500/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg',
-        'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg'
+        'https://image.tmdb.org/t/p/w500/gKkl37BQuKTanygYQG1pyYgLVgf.jpg'
     ];
     
     let hash = 0;
     for (let i = 0; i < t.length; i++) {
         hash = t.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const index = Math.abs(hash) % genericPosters.length;
-    return genericPosters[index];
+    return genericPosters[Math.abs(hash) % genericPosters.length];
 }
 
-// Detay Modalını Sayfaya Otomatik Ekleyen Fonksiyon
 function ensureDetailModalExists() {
     if (document.getElementById('movieDetailModal')) return;
 
@@ -322,7 +240,7 @@ function ensureDetailModalExists() {
                     <div class="modal-info">
                         <h3 id="modalTitle">Film Adı</h3>
                         <div id="modalMeta" class="modal-meta-badges"></div>
-                        <p id="modalDescription">AI analizi ve içerik detayları burada yer almaktadır...</p>
+                        <p id="modalDescription">AI analizi...</p>
                         <div class="modal-actions">
                             <button id="modalAddToListBtn" class="btn-primary" onclick="addCurrentMovieToWatchlist()">🎬 Listeme Ekle</button>
                         </div>
@@ -334,13 +252,10 @@ function ensureDetailModalExists() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-// Aktif Modal Verilerini Saklamak İçin Global Değişken
 let activeModalMovie = null;
 
-// Detay Penceresini Açma
 function openMovieDetails(title, rating, genre, duration, posterUrl) {
     ensureDetailModalExists();
-    
     activeModalMovie = { title, rating, genre, duration, posterUrl };
 
     document.getElementById('modalTitle').innerText = title;
@@ -351,13 +266,11 @@ function openMovieDetails(title, rating, genre, duration, posterUrl) {
     document.getElementById('movieDetailModal').classList.remove('hidden');
 }
 
-// Detay Penceresini Kapatma
 function closeMovieDetails() {
     const modal = document.getElementById('movieDetailModal');
     if (modal) modal.classList.add('hidden');
 }
 
-// "Daha Sonra İzle" (Watchlist) Listesine Ekleme Fonksiyonu
 async function addCurrentMovieToWatchlist() {
     if (!activeModalMovie) {
         alert("Eklenecek içerik bulunamadı!");
@@ -365,54 +278,66 @@ async function addCurrentMovieToWatchlist() {
     }
 
     const userId = getActiveUserId();
-    const watchlistEndpoint = `https://dockerify-movie-recommendation-system.onrender.com/api/users/${userId}/watchlist`;
+    const token = localStorage.getItem("jwtToken");
+    
+    const endpoints = [
+        `https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users/${userId}/watchlist`,
+        `https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/users/${userId}/watchlist`,
+        `https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/watchlist`
+    ];
 
-    try {
-        const response = await fetch(watchlistEndpoint, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-                title: activeModalMovie.title,
-                genre: activeModalMovie.genre,
-                rating: activeModalMovie.rating,
-                duration: activeModalMovie.duration,
-                posterUrl: activeModalMovie.posterUrl
-            })
-        });
+    let success = false;
 
-        if (response.status === 401 || response.status === 403) {
-            alert("Oturum süreniz doldu veya yetkiniz yok. Lütfen tekrar giriş yapın.");
-            logout();
-            return;
-        }
-
-        if (response.ok) {
-            alert(`🎉 "${activeModalMovie.title}" başarıyla 'Daha Sonra İzle' listenize eklendi!`);
-            closeMovieDetails();
-        } else {
-            // Alternatif olarak backend sadece film adı veya ID bekliyor olabilir
-            const altResponse = await fetch(`${watchlistEndpoint}?title=${encodeURIComponent(activeModalMovie.title)}`, {
+    for (const endpoint of endpoints) {
+        try {
+            let response = await fetch(endpoint, {
                 method: 'POST',
-                headers: getAuthHeaders()
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": token ? `Bearer ${token}` : ""
+                },
+                body: JSON.stringify({
+                    title: activeModalMovie.title,
+                    genre: activeModalMovie.genre,
+                    rating: activeModalMovie.rating,
+                    duration: activeModalMovie.duration,
+                    posterUrl: activeModalMovie.posterUrl,
+                    userId: userId
+                })
             });
-            
-            if (altResponse.ok) {
-                alert(`🎉 "${activeModalMovie.title}" başarıyla listenize eklendi!`);
-                closeMovieDetails();
-            } else {
-                throw new Error("İstek başarısız oldu.");
+
+            if (response.ok) {
+                success = true;
+                break;
             }
+
+            response = await fetch(`${endpoint}?title=${encodeURIComponent(activeModalMovie.title)}&movieId=${encodeURIComponent(activeModalMovie.title)}`, {
+                method: 'POST',
+                headers: {
+                    "Authorization": token ? `Bearer ${token}` : ""
+                }
+            });
+
+            if (response.ok) {
+                success = true;
+                break;
+            }
+        } catch (err) {
+            console.warn("Endpoint denenirken hata:", endpoint, err);
         }
-    } catch (error) {
-        console.error("Watchlist ekleme hatası:", error);
-        alert(`"${activeModalMovie.title}" listenize eklenirken bir sorun oluştu.`);
+    }
+
+    if (success) {
+        alert(`🎉 "${activeModalMovie.title}" başarıyla 'Daha Sonra İzle' listenize eklendi!`);
+        closeMovieDetails();
+    } else {
+        alert(`"${activeModalMovie.title}" listenize eklenirken sunucu olumsuz yanıt döndü.`);
     }
 }
 
 async function generateShowcase() {
     const cityInput = document.getElementById('cityInput');
     const city = cityInput ? cityInput.value.trim() : '';
-    
     const userId = getActiveUserId();
     const selectedUserName = getActiveUserName();
 
@@ -434,14 +359,11 @@ async function generateShowcase() {
         });
         
         if (response.status === 401 || response.status === 403) {
-            alert("Oturum süreniz doldu veya yetkiniz yok. Lütfen tekrar giriş yapın.");
             logout();
             return;
         }
 
-        if (!response.ok) {
-            throw new Error(`API isteği başarısız oldu. HTTP Status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error();
 
         const data = await response.json();
         currentShowcaseId = data.showcaseId;
@@ -471,7 +393,6 @@ async function generateShowcase() {
         const movieGrid = document.getElementById('movieGrid');
         if (movieGrid) {
             movieGrid.innerHTML = '';
-
             const movieTitles = data.movieTitles || data.contents || data.movies || [];
 
             if (Array.isArray(movieTitles) && movieTitles.length > 0) {
@@ -480,8 +401,6 @@ async function generateShowcase() {
                     card.className = 'movie-card';
                     
                     const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
-                    
-                    // Önce backend nesnesindeki orijinal posteri kontrol et, yoksa ada özel fonksiyonu çağır
                     const posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl)) 
                         ? (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl) 
                         : getFallbackPoster(title);
@@ -490,7 +409,6 @@ async function generateShowcase() {
                     const genre = movie.genre || 'Fantastik / Macera';
                     const duration = movie.durationInMinutes || movie.duration || '135';
 
-                    // Karta tıklandığında detay modalını aç ve parametreleri eksiksiz aktar
                     card.addEventListener('click', () => {
                         openMovieDetails(title, rating, genre, duration, posterUrl);
                     });
@@ -531,7 +449,6 @@ async function generateShowcase() {
         if (previewCard) previewCard.classList.remove('hidden');
 
     } catch (error) {
-        console.error('Hata:', error);
         alert('Vitrin oluşturulurken bir hata meydana geldi!');
     } finally {
         if (loading) loading.classList.add('hidden');
@@ -551,7 +468,7 @@ async function approveShowcase() {
         });
 
         if (response.status === 401 || response.status === 403) {
-            alert("Oturum süreniz doldu veya bu işlem için yetkiniz yok.");
+            alert("Oturum süreniz doldu veya yetkiniz yok.");
             return;
         }
 
@@ -563,7 +480,6 @@ async function approveShowcase() {
             alert('Onaylama işlemi sırasında bir hata oluştu.');
         }
     } catch (error) {
-        console.error('Hata:', error);
-        alert('Sunucuya bağlanılamadı.');
+        alert('Sunucuya bağlanılamadı!');
     }
 }
