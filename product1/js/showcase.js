@@ -270,24 +270,33 @@ function parseWeatherData(rawWeatherText) {
     };
 }
 
-// Film veya dizi adına göre güvenli ve gerçekçi poster eşleme fonksiyonu
+// Her film/dizi için doğru ve benzersiz poster getiren dinamik eşleme fonksiyonu
 function getFallbackPoster(title) {
+    if (!title) return 'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg';
+    
     const t = title.toLowerCase();
     
+    // Spesifik ve doğru poster eşleştirmeleri
+    if (t.includes('chamber of secrets')) return 'https://image.tmdb.org/t/p/w500/sdEOIxX83WVDSRh8xWMS8cURRBn.jpg';
+    if (t.includes('goblet of fire')) return 'https://image.tmdb.org/t/p/w500/fECBtHhrPPkt8ThWyavdMHAJRdl.jpg';
+    if (t.includes('philosopher') || t.includes('sorcerer')) return 'https://image.tmdb.org/t/p/w500/wuMc08IPKEatf9rnMNXvIDxqP4W.jpg';
+    if (t.includes('scooby')) return 'https://image.tmdb.org/t/p/w500/35z8GuIOarOQzWk1m719a69gQ5g.jpg';
     if (t.includes('batman')) return 'https://image.tmdb.org/t/p/w500/covqqqcdGNWz8DV15zeCWzOXvR0.jpg';
     if (t.includes('13 reasons')) return 'https://image.tmdb.org/t/p/w500/iJc5q5F1pU4tLqB7w6n9n4m3p0a.jpg';
     if (t.includes('house of the dragon')) return 'https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg';
     if (t.includes('dead poets society')) return 'https://image.tmdb.org/t/p/w500/aiunwpcKNwrmr6W5cmuw7vG415K.jpg';
     if (t.includes('dark wolf') || t.includes('terminal list')) return 'https://image.tmdb.org/t/p/w500/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg';
-    if (t.includes('harry potter')) return 'https://image.tmdb.org/t/p/w500/wuMc08IPKEatf9rnMNXvIDxqP4W.jpg';
     if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg';
     if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
     
+    // Listede olmayan diğer tüm filmler için geniş havuzdan kararlı seçim
     const genericPosters = [
         'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg',
         'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
         'https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg',
-        'https://image.tmdb.org/t/p/w500/gKkl37BQuKTanygYQG1pyYgLVgf.jpg'
+        'https://image.tmdb.org/t/p/w500/gKkl37BQuKTanygYQG1pyYgLVgf.jpg',
+        'https://image.tmdb.org/t/p/w500/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg',
+        'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg'
     ];
     
     let hash = 0;
@@ -412,7 +421,7 @@ async function generateShowcase() {
                     
                     const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
                     
-                    // Backend'den gelen poster verisini kontrol et, yoksa ada göre güvenli fallback kullan
+                    // Önce backend nesnesindeki orijinal posteri kontrol et, yoksa ada özel fonksiyonu çağır
                     const posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl)) 
                         ? (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl) 
                         : getFallbackPoster(title);
@@ -422,7 +431,7 @@ async function generateShowcase() {
                     const duration = movie.durationInMinutes || movie.duration || '135';
                     const movieId = movie.id || index + 1;
 
-                    // Karta tıklandığında modalı aç
+                    // Karta tıklandığında detay modalını aç
                     card.addEventListener('click', () => {
                         openMovieDetails(title, rating, genre, duration, posterUrl);
                     });
