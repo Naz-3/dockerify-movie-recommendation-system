@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     
     // 1. LocalStorage'dan giriş yapan kullanıcının adını al
-    const activeUser = localStorage.getItem("username") || "Kullanıcı"; 
+    const activeUser = localStorage.getItem("username") || localStorage.getItem("activeUsername") || localStorage.getItem("user") || "Bilinmeyen Kullanıcı";
 
     // 2. Ekrandaki etikete doğrudan kullanıcı adını yazdır
     const userDisplay = document.getElementById("activeUsernameDisplay");
