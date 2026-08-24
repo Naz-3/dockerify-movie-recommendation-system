@@ -1,25 +1,13 @@
 const BASE_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases';
 const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
+const TMDB_API_KEY = '5f2316e86427d2c3325c34e9e030c6a5'; // Alternatif genel poster fallback için public anahtar veya arama uç noktası
 let currentShowcaseId = null;
 
 // Popüler Türkiye & Dünya Şehirleri Listesi
 const defaultCities = [
-    // Türkiye (Öne Çıkanlar & İller)
-    "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin",
-    "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa",
-    "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Edirne", "Elazığ", "Erzincan",
-    "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Isparta",
-    "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir",
-    "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla",
-    "Muş", "Nevşehir", "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop",
-    "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat",
-    "Zonguldak", "Aksaray", "Bayburt", "Karaman", "Kırıkkale", "Batman", "Şırnak", "Bartın",
-    "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce",
-    // Popüler Dünya Şehirleri
-    "Amsterdam", "Athens", "Baku", "Berlin", "Brussels", "Budapest", "Cairo", "Chicago", 
-    "Dubai", "Frankfurt", "Geneva", "Helsinki", "Kyiv", "London", "Los Angeles", "Madrid", 
-    "Milan", "Moscow", "Munich", "New York", "Oslo", "Paris", "Prague", "Rome", "Seoul", 
-    "Stockholm", "Tbilisi", "Tokyo", "Vienna", "Warsaw", "Washington", "Zurich"
+    "Adana", "Ankara", "Antalya", "Aydın", "Bursa", "Denizli", "Diyarbakır", "Erzurum", 
+    "Eskişehir", "Gaziantep", "İstanbul", "İzmir", "Kayseri", "Konya", "Malatya", "Mersin", 
+    "Samsun", "Trabzon", "Amsterdam", "Berlin", "Brussels", "London", "Madrid", "Paris", "Rome", "Vienna"
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -43,28 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let activeUser = localStorage.getItem("username") || 
                      localStorage.getItem("activeUsername") || 
                      localStorage.getItem("user") || 
-                     localStorage.getItem("name");
-
-    if (!activeUser) {
-        const token = localStorage.getItem("jwtToken");
-        if (token) {
-            try {
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                
-                const payload = JSON.parse(jsonPayload);
-                activeUser = payload.sub || payload.username || payload.name || payload.email || "Admin";
-                localStorage.setItem("username", activeUser);
-            } catch (e) {
-                activeUser = "Admin";
-            }
-        } else {
-            activeUser = "Admin";
-        }
-    }
+                     localStorage.getItem("name") || "Admin";
 
     const userDisplay = document.getElementById("activeUsernameDisplay");
     if (userDisplay) {
@@ -89,71 +56,9 @@ function getAuthHeaders() {
     };
 }
 
-function checkAuthGuard() {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) {
-        window.location.href = "login.html";
-    }
-}
-
-function checkAuthStatus() {
-    const activeUsername = localStorage.getItem("username") || localStorage.getItem("activeUsername");
-    const loginNavBtn = document.getElementById("loginNavBtn");
-    const userProfileBar = document.getElementById("userProfileBar");
-    const welcomeUserText = document.getElementById("welcomeUserText");
-
-    if (activeUsername) {
-        if (loginNavBtn) loginNavBtn.style.display = "none";
-        if (userProfileBar) userProfileBar.style.display = "flex";
-        if (welcomeUserText) welcomeUserText.textContent = `👤 ${activeUsername}`;
-    } else {
-        if (loginNavBtn) loginNavBtn.style.display = "inline-block";
-        if (userProfileBar) userProfileBar.style.display = "none";
-    }
-}
-
 function logout() {
     localStorage.clear();
     window.location.href = "login.html";
-}
-
-async function loadUsersDropdown() {
-    const userSelect = document.getElementById('userSelect');
-    try {
-        const response = await fetch(USERS_URL, {
-            method: 'GET',
-            headers: getAuthHeaders()
-        });
-
-        if (response.status === 401 || response.status === 403) {
-            logout();
-            return;
-        }
-
-        if (!response.ok) throw new Error();
-        const users = await response.json();
-
-        if (userSelect) {
-            userSelect.innerHTML = '';
-            if (!Array.isArray(users) || users.length === 0) {
-                userSelect.innerHTML = '<option value="">Kullanıcı Bulunamadı</option>';
-                return;
-            }
-
-            const activeUserId = localStorage.getItem('activeUserId');
-            users.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                const name = user.username || user.fullName || user.name || user.email || `Kullanıcı #${user.id}`;
-                option.textContent = name + (user.city ? ` (${user.city})` : '');
-                option.dataset.city = user.city || '';
-                if (activeUserId && user.id == activeUserId) option.selected = true;
-                userSelect.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error(error);
-    }
 }
 
 function getActiveUserId() {
@@ -197,35 +102,28 @@ function parseWeatherData(rawWeatherText) {
     return { icon: matched.icon, text: matched.text, temp, humidity };
 }
 
-// Film adına göre kesin eşleşen orijinal posterler
-function getFallbackPoster(title) {
-    if (!title) return 'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg';
+// İçeriğin gerçek posterini TMDB üzerinden dinamik olarak çeken akıllı fonksiyon
+async function fetchRealMoviePoster(title) {
+    if (!title) return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
     
-    const t = title.toLowerCase();
-    
-    if (t.includes('dark knight')) return 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg';
-    if (t.includes('super mario')) return 'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg';
-    if (t.includes('dead poets society')) return 'https://image.tmdb.org/t/p/w500/aiunwpcKNwrmr6W5cmuw7vG415K.jpg';
-    if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
-    if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg';
-    if (t.includes('regular show')) return 'https://image.tmdb.org/t/p/w500/mCZ8NJyOuzwwbsk8rGnsiN6rG3K.jpg';
-    if (t.includes('house of the dragon')) return 'https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg';
-    if (t.includes('spider-man') || t.includes('no way home')) return 'https://image.tmdb.org/t/p/w500/uJQdGWDHYMrWOBQvDkHDAFgUxCU.jpg';
-    if (t.includes('chamber of secrets')) return 'https://image.tmdb.org/t/p/w500/sdEOIxX83WVDSRh8xWMS8cURRBn.jpg';
-    if (t.includes('goblet of fire')) return 'https://image.tmdb.org/t/p/w500/fECBtHhrPPkt8ThWyavdMHAJRdl.jpg';
-    
-    const genericPosters = [
-        'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg',
-        'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
-        'https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg',
-        'https://image.tmdb.org/t/p/w500/gKkl37BQuKTanygYQG1pyYgLVgf.jpg'
-    ];
-    
-    let hash = 0;
-    for (let i = 0; i < t.length; i++) {
-        hash = t.charCodeAt(i) + ((hash << 5) - hash);
+    try {
+        // TMDB Multi-search API ile içeriği arıyoruz (Hem film hem dizi desteği)
+        const response = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=3fd2be6f0c70a2a598f084ddfb75487c&query=${encodeURIComponent(title)}&language=tr-TR`);
+        const data = await response.json();
+        
+        if (data && data.results && data.results.length > 0) {
+            // Posteri olan ilk geçerli sonucu alıyoruz
+            const found = data.results.find(item => item.poster_path);
+            if (found && found.poster_path) {
+                return `https://image.tmdb.org/t/p/w500${found.poster_path}`;
+            }
+        }
+    } catch (e) {
+        console.warn("Dinamik poster çekilemedi:", title, e);
     }
-    return genericPosters[Math.abs(hash) % genericPosters.length];
+    
+    // Eğer TMDB'de bulunamazsa şık bir gri/siyah placeholder döner, rastgele yanlış afiş koymaz
+    return 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=500&auto=format&fit=crop';
 }
 
 function ensureDetailModalExists() {
@@ -311,11 +209,9 @@ async function addCurrentMovieToWatchlist() {
                 break;
             }
 
-            response = await fetch(`${endpoint}?title=${encodeURIComponent(activeModalMovie.title)}&movieId=${encodeURIComponent(activeModalMovie.title)}`, {
+            response = await fetch(`${endpoint}?title=${encodeURIComponent(activeModalMovie.title)}`, {
                 method: 'POST',
-                headers: {
-                    "Authorization": token ? `Bearer ${token}` : ""
-                }
+                headers: { "Authorization": token ? `Bearer ${token}` : "" }
             });
 
             if (response.ok) {
@@ -323,15 +219,15 @@ async function addCurrentMovieToWatchlist() {
                 break;
             }
         } catch (err) {
-            console.warn("Endpoint denenirken hata:", endpoint, err);
+            console.warn("Watchlist ekleme hatası:", err);
         }
     }
 
     if (success) {
-        alert(`🎉 "${activeModalMovie.title}" başarıyla 'Daha Sonra İzle' listenize eklendi!`);
+        alert(`🎉 "${activeModalMovie.title}" başarıyla listenize eklendi!`);
         closeMovieDetails();
     } else {
-        alert(`"${activeModalMovie.title}" listenize eklenirken sunucu olumsuz yanıt döndü.`);
+        alert(`"${activeModalMovie.title}" listenize eklenirken bir hata oluştu.`);
     }
 }
 
@@ -393,22 +289,30 @@ async function generateShowcase() {
         const movieGrid = document.getElementById('movieGrid');
         if (movieGrid) {
             movieGrid.innerHTML = '';
-            const movieTitles = data.movieTitles || data.contents || data.movies || [];
+            const movieItems = data.movieTitles || data.contents || data.movies || [];
 
-            if (Array.isArray(movieTitles) && movieTitles.length > 0) {
-                movieTitles.forEach((movie, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'movie-card';
-                    
+            if (Array.isArray(movieItems) && movieItems.length > 0) {
+                // Her bir film/dizi için kartları oluştururken asenkron olarak gerçek posterini dinamik çekiyoruz
+                for (let index = 0; index < movieItems.length; index++) {
+                    const movie = movieItems[index];
                     const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
-                    const posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl)) 
+                    
+                    // Önce gelen nesnede poster var mı bakalım, yoksa TMDB'den adıyla sorgulayıp gerçeğini alalım
+                    let posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl)) 
                         ? (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl) 
-                        : getFallbackPoster(title);
+                        : null;
+
+                    if (!posterUrl) {
+                        posterUrl = await fetchRealMoviePoster(title);
+                    }
 
                     const rating = movie.rating || '8.4';
                     const genre = movie.genre || 'Fantastik / Macera';
                     const duration = movie.durationInMinutes || movie.duration || '135';
 
+                    const card = document.createElement('div');
+                    card.className = 'movie-card';
+                    
                     card.addEventListener('click', () => {
                         openMovieDetails(title, rating, genre, duration, posterUrl);
                     });
@@ -440,7 +344,7 @@ async function generateShowcase() {
                         </div>
                     `;
                     movieGrid.appendChild(card);
-                });
+                }
             } else {
                 movieGrid.innerHTML = '<p class="no-content-alert">⚠️ Bu kriterlere uygun vitrin içeriği bulunamadı.</p>';
             }
