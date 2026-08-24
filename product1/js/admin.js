@@ -1,34 +1,16 @@
 const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 const ACTOR_API = "https://dockerify-movie-recommendation-system.onrender.com/api/actors";
-const USER_API = "https://dockerify-movie-recommendation-system.onrender.com/api/users"; // Kullanıcı API adresi
-
-// Sayfa yüklenmeden önce Admin yetkisi kontrolü
-checkAdminAuth();
-
-const movieCount = document.getElementById("movieCount");
-const filmCount = document.getElementById("filmCount");
-const seriesCount = document.getElementById("seriesCount");
-const avgRating = document.getElementById("avgRating");
-
-const table = document.getElementById("contentTable");
-const recentUpdated = document.getElementById("recentUpdated");
-const featuredActors = document.getElementById("featuredActors");
-const dashboardSearch = document.getElementById("dashboardSearch");
+const USER_API = "https://dockerify-movie-recommendation-system.onrender.com/api/users";
 
 let contents = [];
+let movieCount, filmCount, seriesCount, avgRating, table, recentUpdated, featuredActors, dashboardSearch;
 
-document.addEventListener("DOMContentLoaded", () => {
-    loadUsers();
-});
-
-window.onload = () => {
-    loadDashboard();
-    loadUsers(); // Kullanıcıları yükle
-};
-
-// 1. JWT Token alma yardımcı fonksiyonu
+// 1. JWT Token Alma (Standartlaştırılmış ve Güvenli)
 function getAuthHeaders() {
-    const token = localStorage.getItem("jwtToken");
+    let token = localStorage.getItem("jwtToken") || localStorage.getItem("token") || "";
+    if (token.startsWith("Bearer ")) {
+        token = token.substring(7);
+    }
     return {
         "Content-Type": "application/json",
         "Authorization": token ? `Bearer ${token}` : ""
@@ -37,10 +19,10 @@ function getAuthHeaders() {
 
 // 2. Admin Yetki Kontrolü
 function checkAdminAuth() {
-    const token = localStorage.getItem("jwtToken");
+    let token = localStorage.getItem("jwtToken") || localStorage.getItem("token");
     const role = localStorage.getItem("userRole");
 
-    if (!token || role !== "ADMIN") {
+    if (!token || (role && role !== "ADMIN")) {
         alert("Bu sayfaya erişim yetkiniz yok!");
         window.location.href = "showcase.html";
         return false;
@@ -55,34 +37,61 @@ function handleUnauthorized() {
     window.location.href = "login.html";
 }
 
-// 4. KULLANICILARI ÇEKME FONKSİYONU (DÜZELTİLDİ)
+// Sayfa DOM Yüklendiğinde Başlat
+document.addEventListener("DOMContentLoaded", () => {
+    if (!checkAdminAuth()) return;
+
+    // DOM Elemanlarını Güvenli Şekilde Seç
+    movieCount = document.getElementById("movieCount");
+    filmCount = document.getElementById("filmCount");
+    seriesCount = document.getElementById("seriesCount");
+    avgRating = document.getElementById("avgRating");
+    table = document.getElementById("contentTable");
+    recentUpdated = document.getElementById("recentUpdated");
+    featuredActors = document.getElementById("featuredActors");
+    dashboardSearch = document.getElementById("dashboardSearch");
+
+    if (dashboardSearch) {
+        dashboardSearch.addEventListener("keyup", () => {
+            const value = dashboardSearch.value.toLowerCase();
+            const filtered = contents.filter(movie =>
+                movie.title && movie.title.toLowerCase().includes(value)
+            );
+            fillTable(filtered);
+        });
+    }
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
+
+    loadDashboard();
+    loadUsers();
+});
+
+// 4. Kullanıcıları Çekme
 async function loadUsers() {
     const tableBody = document.getElementById("userTableBody");
     const totalUserCount = document.getElementById("totalUsersCount");
 
-    // Token key kontrolü (jwtToken veya token olabilir)
-    const token = localStorage.getItem("jwtToken") || localStorage.getItem("token");
-
     try {
-        const response = await fetch("https://dockerify-movie-recommendation-system.onrender.com/api/users", {
+        const response = await fetch(USER_API, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": token ? `Bearer ${token}` : ""
-            }
+            headers: getAuthHeaders()
         });
-
-        console.log("Kullanıcı API Yanıt Durumu:", response.status);
 
         if (response.status === 401 || response.status === 403) {
             if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ff6b6b;">Erişim Yetkisi Yok (401/403). Lütfen tekrar giriş yapın.</td></tr>`;
             return;
         }
 
-        if (!response.ok) throw new Error("HTTP Hata koda: " + response.status);
+        if (!response.ok) throw new Error("HTTP Hata kodu: " + response.status);
 
         const users = await response.json();
-        console.log("Gelen Kullanıcı Verisi:", users);
 
         if (totalUserCount) totalUserCount.textContent = users.length;
         if (!tableBody) return;
@@ -116,28 +125,7 @@ async function loadUsers() {
     }
 }
 
-// Kullanıcı Silme İşlemi
-async function deleteUser(userId) {
-    if (!confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) return;
-
-    try {
-        const response = await fetch(`${USER_API}/${userId}`, {
-            method: "DELETE",
-            headers: getAuthHeaders()
-        });
-
-        if (response.ok) {
-            alert("Kullanıcı silindi.");
-            loadUsers();
-        } else {
-            alert("Kullanıcı silinemedi.");
-        }
-    } catch (error) {
-        console.error("Kullanıcı silme hatası:", error);
-    }
-}
-
-// 5. DASHBOARD YÜKLEME
+// 5. Dashboard Verilerini Çekme
 async function loadDashboard() {
     try {
         const response = await fetch(API, {
@@ -194,17 +182,17 @@ function fillTable(list) {
         if (posterSrc && typeof posterSrc === 'string') {
             posterSrc = posterSrc.trim();
             if (posterSrc !== '' && !posterSrc.startsWith('http://') && !posterSrc.startsWith('https://')) {
-                posterSrc = `http://backend:8080/uploads/${posterSrc.replace(/^\//, '')}`;
+                posterSrc = `https://image.tmdb.org/t/p/w500${posterSrc}`;
             }
         }
 
         const posterHtml = (posterSrc && posterSrc !== '')
-            ? `<img class="poster" src="${posterSrc}" alt="${movie.title || 'Poster'}" onerror="this.onerror=null; this.src='https://via.placeholder.com/90x135?text=Gorsel+Yok';">`
+            ? `<img class="poster" src="${posterSrc}" alt="${movie.title || 'Poster'}" onerror="this.onerror=null; this.src='https://placehold.co/90x135?text=Gorsel+Yok';">`
             : `<div class="poster no-image">🖼️<br>Görsel Yok</div>`;
 
         const translatedType = typeof t === "function" ? t((movie.type || "").toLowerCase()) : movie.type;
         const editText = typeof t === "function" ? t("edit") : "Düzenle";
-        const deleteText = typeof t === "function" ? t("deleteContent") : "Sil";
+        const deleteText = typeof t === "function" ? t("delete") : "Sil";
 
         table.innerHTML += `
             <tr>
@@ -214,12 +202,8 @@ function fillTable(list) {
                 <td>${movie.year || '-'}</td>
                 <td>⭐ ${movie.rating ?? "-"}</td>
                 <td>
-                    <button class="editBtn" data-i18n="edit" onclick="editMovie(${movie.id})">
-                        ${editText}
-                    </button>
-                    <button class="deleteBtn" data-i18n="delete" onclick="deleteMovie(${movie.id})">
-                        ${deleteText}
-                    </button>
+                    <button class="editBtn" onclick="editMovie(${movie.id})">${editText}</button>
+                    <button class="deleteBtn" onclick="deleteMovie(${movie.id})">${deleteText}</button>
                 </td>
             </tr>
         `;
@@ -255,11 +239,7 @@ async function loadFeaturedActors() {
             headers: getAuthHeaders()
         });
 
-        if (response.status === 401 || response.status === 403) {
-            handleUnauthorized();
-            return;
-        }
-
+        if (response.status === 401 || response.status === 403) return;
         if (!response.ok) return;
 
         const actors = await response.json();
@@ -276,7 +256,7 @@ async function loadFeaturedActors() {
             featuredActors.innerHTML += `
             <li>
                 <b class="${cls}">${medal} ${actor.name}</b><br>
-                <small>🎬 ${actor.contentCount} içerik</small>
+                <small>🎬 ${actor.contentCount || 0} içerik</small>
             </li>
             `;
         });
@@ -285,23 +265,12 @@ async function loadFeaturedActors() {
     }
 }
 
-if (dashboardSearch) {
-    dashboardSearch.addEventListener("keyup", () => {
-        const value = dashboardSearch.value.toLowerCase();
-        const filtered = contents.filter(movie =>
-            movie.title && movie.title.toLowerCase().includes(value)
-        );
-        fillTable(filtered);
-    });
-}
-
 function editMovie(id) {
     window.location.href = `edit-content.html?id=${id}`;
 }
 
 async function deleteMovie(id) {
-    const result = confirm("Bu içerik silinsin mi?");
-    if (!result) return;
+    if (!confirm("Bu içerik silinsin mi?")) return;
 
     try {
         const response = await fetch(`${API}/${id}`, {
@@ -321,21 +290,34 @@ async function deleteMovie(id) {
             if (typeof showToast === "function") showToast("error", "İçerik silinemedi.");
         }
     } catch (error) {
-        console.error("Silme işlemi sırasında hata oluştu:", error);
+        console.error("Silme hatası:", error);
     }
 }
 
-// Çıkış Yap Fonksiyonu
+async function deleteUser(userId) {
+    if (!confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) return;
+
+    try {
+        const response = await fetch(`${USER_API}/${userId}`, {
+            method: "DELETE",
+            headers: getAuthHeaders()
+        });
+
+        if (response.ok) {
+            alert("Kullanıcı silindi.");
+            loadUsers();
+        } else {
+            alert("Kullanıcı silinemedi.");
+        }
+    } catch (error) {
+        console.error("Kullanıcı silme hatası:", error);
+    }
+}
+
 function logout() {
-    // Hafızadaki oturum bilgilerini temizle
     localStorage.removeItem("jwtToken");
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
     localStorage.removeItem("username");
-    
-    // Tüm lokal verileri sıfırlamak isterseniz:
-    // localStorage.clear();
-
-    // Kullanıcıyı giriş sayfasına yönlendir
     window.location.href = "login.html";
 }

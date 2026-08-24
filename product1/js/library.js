@@ -1,58 +1,59 @@
-// 1. API Sabitleri ve Başlangıç Değişkenleri
 const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 
-const grid = document.getElementById("libraryGrid");
-const searchInput = document.getElementById("searchInput");
-const typeFilter = document.getElementById("typeFilter");
-const sortFilter = document.getElementById("sortFilter");
-
+let grid, searchInput, typeFilter, sortFilter;
 let movies = [];
 
-// 2. JWT Token alma yardımcı fonksiyonu
 function getAuthHeaders() {
-    const token = localStorage.getItem("jwtToken");
+    let token = localStorage.getItem("jwtToken") || localStorage.getItem("token") || "";
+    if (token.startsWith("Bearer ")) {
+        token = token.substring(7);
+    }
     return {
         "Content-Type": "application/json",
         "Authorization": token ? `Bearer ${token}` : ""
     };
 }
 
-// 3. Poster URL yardımcı fonksiyonu
 function getPosterUrl(movie) {
-    const poster =
-        movie.poster ||
-        movie.Poster ||
-        movie.posterUrl ||
-        movie.posterURL ||
-        movie.image ||
-        "";
-
-    if (!poster) {
-        return "https://placehold.co/300x450?text=Poster";
-    }
-
-    if (poster.startsWith("/")) {
-        return `https://image.tmdb.org/t/p/w500${poster}`;
-    }
-
+    const poster = movie.poster || movie.Poster || movie.posterUrl || movie.posterURL || movie.image || "";
+    if (!poster) return "https://placehold.co/300x450?text=Poster";
+    if (poster.startsWith("/")) return `https://image.tmdb.org/t/p/w500${poster}`;
     return poster;
 }
 
-// 4. Oturum Koruma (Auth Guard)
 function checkAuthGuard() {
-    const token = localStorage.getItem("jwtToken");
+    const token = localStorage.getItem("jwtToken") || localStorage.getItem("token");
     if (!token) {
         window.location.href = "login.html";
+        return false;
     }
+    return true;
 }
 
-// 5. Sayfa Yüklendiğinde Oturum Kontrolü ve Veri Çekme
-window.onload = () => {
-    checkAuthGuard();
-    loadMovies();
-};
+document.addEventListener("DOMContentLoaded", () => {
+    if (!checkAuthGuard()) return;
 
-// 6. İçerikleri Getiren Fonksiyon (GET - Protected)
+    grid = document.getElementById("libraryGrid");
+    searchInput = document.getElementById("searchInput");
+    typeFilter = document.getElementById("typeFilter");
+    sortFilter = document.getElementById("sortFilter");
+
+    if (searchInput) searchInput.addEventListener("keyup", renderMovies);
+    if (typeFilter) typeFilter.addEventListener("change", renderMovies);
+    if (sortFilter) sortFilter.addEventListener("change", renderMovies);
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "login.html";
+        });
+    }
+
+    loadMovies();
+});
+
 async function loadMovies() {
     try {
         const response = await fetch(API, {
@@ -66,34 +67,25 @@ async function loadMovies() {
             return;
         }
 
-        if (!response.ok) {
-            throw new Error(`İçerikler yüklenemedi. HTTP Status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Status: ${response.status}`);
 
         movies = await response.json();
         renderMovies();
-
     } catch (error) {
         console.error("Film yükleme hatası:", error);
     }
 }
 
-// 7. İçerikleri Arayüzde Listeleyen Fonksiyon
 function renderMovies() {
     let list = [...movies];
     const search = searchInput ? searchInput.value.toLowerCase() : "";
 
     if (search !== "") {
-        list = list.filter(movie =>
-            movie.title && movie.title.toLowerCase().includes(search)
-        );
+        list = list.filter(movie => movie.title && movie.title.toLowerCase().includes(search));
     }
 
     if (typeFilter && typeFilter.value !== "all") {
-        list = list.filter(movie =>
-            movie.type &&
-            movie.type.toLowerCase() === typeFilter.value
-        );
+        list = list.filter(movie => movie.type && movie.type.toLowerCase() === typeFilter.value);
     }
 
     if (sortFilter) {
@@ -111,7 +103,6 @@ function renderMovies() {
     }
 
     if (!grid) return;
-
     grid.innerHTML = "";
 
     if (list.length === 0) {
@@ -125,18 +116,12 @@ function renderMovies() {
     }
 
     list.forEach(movie => {
-        const typeText =
-            typeof t === "function"
-                ? t((movie.type || "").toLowerCase())
-                : (movie.type || "-");
-
+        const typeText = typeof t === "function" ? t((movie.type || "").toLowerCase()) : (movie.type || "-");
         const detailsText = typeof t === "function" ? t("details") : "Detaylar";
         const syncText = typeof t === "function" ? t("sync") : "Senkronize Et";
-        const deleteText = typeof t === "function" ? t("deleteContant") : "Sil";
-
+        const deleteText = typeof t === "function" ? t("delete") : "Sil";
         const posterUrl = getPosterUrl(movie);
 
-        // Hem String hem Array tipindeki oyuncu verisini güvenle formatlama
         let formattedActors = "-";
         if (typeof movie.actors === "string" && movie.actors.trim() !== "") {
             formattedActors = movie.actors;
@@ -161,22 +146,10 @@ function renderMovies() {
                 <p>⭐ ${movie.rating ?? "-"}</p>
                 <p>🎭 ${formattedActors}</p>
                 <div class="library-actions">
-                    <button 
-                        class="details-btn" 
-                        onclick="viewDetails(${movie.id})">
-                        ${detailsText}
-                    </button>
+                    <button class="details-btn" onclick="viewDetails(${movie.id})">${detailsText}</button>
                     <div class="action-row">
-                        <button 
-                            class="sync" 
-                            onclick="syncMovie(${movie.id})">
-                            ${syncText}
-                        </button>
-                        <button 
-                            class="delete" 
-                            onclick="deleteMovie(${movie.id})">
-                            ${deleteText}
-                        </button>
+                        <button class="sync" onclick="syncMovie(${movie.id})">${syncText}</button>
+                        <button class="delete" onclick="deleteMovie(${movie.id})">${deleteText}</button>
                     </div>
                 </div>
             </div>
@@ -185,12 +158,6 @@ function renderMovies() {
     });
 }
 
-// 8. Event Listener'lar
-if (searchInput) searchInput.addEventListener("keyup", renderMovies);
-if (typeFilter) typeFilter.addEventListener("change", renderMovies);
-if (sortFilter) sortFilter.addEventListener("change", renderMovies);
-
-// 9. Yönlendirme Fonksiyonları
 function editMovie(id) {
     window.location.href = `edit-content.html?id=${id}`;
 }
@@ -199,7 +166,6 @@ function viewDetails(id) {
     window.location.href = `content-details.html?id=${id}`;
 }
 
-// 10. İçerik Silme Fonksiyonu
 async function deleteMovie(id) {
     if (!confirm("Bu içerik silinsin mi?")) return;
 
@@ -210,24 +176,18 @@ async function deleteMovie(id) {
         });
 
         if (response.status === 401 || response.status === 403) {
-            alert("Bu işlem için yetkiniz yok veya oturumunuz doldu.");
-            localStorage.clear();
-            window.location.href = "login.html";
+            alert("Bu işlem için yetkiniz yok.");
             return;
         }
 
-        if (!response.ok) {
-            throw new Error("Silme işlemi başarısız.");
-        }
+        if (!response.ok) throw new Error("Silme işlemi başarısız.");
 
         loadMovies();
-
     } catch (error) {
         console.error("Silme hatası:", error);
     }
 }
 
-// 11. Senkronizasyon Fonksiyonu
 async function syncMovie(id) {
     try {
         const response = await fetch(`${API}/sync/${id}`, {
@@ -235,34 +195,14 @@ async function syncMovie(id) {
             headers: getAuthHeaders()
         });
 
-        if (response.status === 401 || response.status === 403) {
-            alert("Bu işlem için yetkiniz yok.");
-            return;
-        }
-
         if (!response.ok) {
-            if (typeof showMessage === "function") {
-                await showMessage("error", "İçe Aktarma Başarısız", "İçerik içe aktarılamadı.");
-            } else {
-                alert("İçerik içe aktarılamadı.");
-            }
+            alert("İçerik senkronize edilemedi.");
             return;
         }
 
-        if (typeof showMessage === "function") {
-            await showMessage("success", "Senkronizasyon Tamamlandı", "Bölüm OMDb ile başarıyla senkronize edildi.");
-        } else {
-            alert("Bölüm OMDb ile başarıyla senkronize edildi.");
-        }
-
+        alert("OMDb ile senkronizasyon tamamlandı.");
         loadMovies();
-
     } catch (error) {
         console.error("Sync hatası:", error);
-        if (typeof showMessage === "function") {
-            await showMessage("error", "Sunucu Hatası", "Sunucuya ulaşılamadı.");
-        } else {
-            alert("Sunucuya ulaşılamadı.");
-        }
     }
 }

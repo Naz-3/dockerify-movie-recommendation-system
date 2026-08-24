@@ -2,14 +2,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const BASE_URL = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
 
     function getAuthHeaders() {
-        const token = localStorage.getItem("jwtToken");
+        let token = localStorage.getItem("jwtToken") || localStorage.getItem("token") || "";
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
         return {
             "Content-Type": "application/json",
             "Authorization": token ? `Bearer ${token}` : ""
         };
     }
 
-    const currentUser = JSON.parse(localStorage.getItem("currentUser")) || { username: "user1" };
+    const currentUser = JSON.parse(localStorage.getItem("currentUser")) || { username: "User" };
     const usernameElem = document.getElementById("activeUsername");
     if (usernameElem) usernameElem.innerText = currentUser.username;
 
@@ -17,9 +20,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     let watchlist = JSON.parse(localStorage.getItem("user_watchlist")) || [];
     let currentData = [];
 
-    // ==========================================
-    // MOBİL MÜNÜ VE YÖNLENDİRME DÜZELTMELERİ
-    // ==========================================
     const menuToggle = document.getElementById("menuToggle");
     const sidebar = document.querySelector(".sidebar");
 
@@ -29,7 +29,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    // Sayfa dışı tıklamada mobil sidebar'ı kapat
     document.addEventListener("click", (e) => {
         if (sidebar && sidebar.classList.contains("mobile-open")) {
             if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
@@ -61,17 +60,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     function refreshUI() {
-        const path = window.location.pathname;
+        const path = window.location.pathname.toLowerCase();
 
-        if (path.includes("favorites.html")) {
-            const favMovies = currentData.filter(m => favorites.includes(m.id));
+        if (path.includes("favorites")) {
+            const favMovies = currentData.filter(m => favorites.includes(Number(m.id)));
             renderGrid(document.getElementById("favoritesGrid"), favMovies, "Henüz favori içeriğiniz yok.");
-        } else if (path.includes("watchlist.html")) {
-            const watchMovies = currentData.filter(m => watchlist.includes(m.id));
+        } else if (path.includes("watchlist")) {
+            const watchMovies = currentData.filter(m => watchlist.includes(Number(m.id)));
             renderGrid(document.getElementById("watchlistGrid"), watchMovies, "Daha sonra izlenecek içeriğiniz yok.");
-        } else if (path.includes("search.html")) {
+        } else if (path.includes("search")) {
             renderGrid(document.getElementById("searchResultsGrid"), currentData);
-        } else if (path.includes("latest.html")) {
+        } else if (path.includes("latest") || path.includes("library")) {
             renderGrid(document.getElementById("latestGrid"), currentData);
         }
     }
@@ -81,13 +80,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const isFav = favorites.includes(itemId);
         const isWatch = watchlist.includes(itemId);
 
-        const posterSrc = item.poster || item.posterUrl || 'https://via.placeholder.com/300x450?text=G%C3%B6rsel+Yok';
+        const posterSrc = item.poster || item.posterUrl || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
         const titleText = item.title || 'İsimsiz İçerik';
         const genreText = item.genre || item.type || 'İçerik';
 
         return `
             <div class="media-card" data-id="${itemId}">
-                <img src="${posterSrc}" alt="${titleText}" class="poster" onerror="this.src='https://via.placeholder.com/300x450?text=G%C3%B6rsel+Yok'">
+                <img src="${posterSrc}" alt="${titleText}" class="poster" onerror="this.src='https://placehold.co/300x450?text=G%C3%B6rsel+Yok'">
                 <div class="card-body">
                     <h4>${titleText}</h4>
                     <span class="genre">${genreText}</span>
@@ -114,38 +113,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     async function initPage() {
-        const path = window.location.pathname;
+        const path = window.location.pathname.toLowerCase();
         let targetGridId = "";
 
-        if (path.includes("search.html")) targetGridId = "searchResultsGrid";
-        else if (path.includes("latest.html")) targetGridId = "latestGrid";
-        else if (path.includes("favorites.html")) targetGridId = "favoritesGrid";
-        else if (path.includes("watchlist.html")) targetGridId = "watchlistGrid";
+        if (path.includes("search")) targetGridId = "searchResultsGrid";
+        else if (path.includes("latest")) targetGridId = "latestGrid";
+        else if (path.includes("favorites")) targetGridId = "favoritesGrid";
+        else if (path.includes("watchlist")) targetGridId = "watchlistGrid";
 
         const gridElem = document.getElementById(targetGridId);
-        if (!gridElem) return;
 
         try {
             const response = await fetch(BASE_URL, { headers: getAuthHeaders() });
-            if (!response.ok) throw new Error("Veri çekilemedi.");
+            if (!response.ok) throw new Error("Veri çekilemedi. Status: " + response.status);
 
             currentData = await response.json();
 
-            if (path.includes("latest.html")) {
+            if (path.includes("latest")) {
                 currentData.sort((a, b) => b.id - a.id);
             }
 
             refreshUI();
         } catch (error) {
             console.error("Hata:", error);
-            gridElem.innerHTML = '<p style="color:#ef4444">Veriler veritabanından yüklenirken bir sorun oluştu.</p>';
+            if (gridElem) {
+                gridElem.innerHTML = '<p style="color:#ef4444">Veriler veritabanından yüklenirken bir sorun oluştu.</p>';
+            }
         }
     }
 
     const searchBtn = document.getElementById("searchBtn");
     if (searchBtn) {
         searchBtn.addEventListener("click", async () => {
-            const query = document.getElementById("searchInput").value.trim();
+            const queryInput = document.getElementById("searchInput");
+            const query = queryInput ? queryInput.value.trim() : "";
             if (!query) {
                 initPage();
                 return;
@@ -160,14 +161,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 currentData = await response.json();
                 refreshUI();
             } catch (error) {
-                console.error("Arama Hatasi:", error);
+                console.error("Arama Hatası:", error);
             }
         });
     }
 
     window.logout = function() {
-        localStorage.removeItem("jwtToken");
-        localStorage.removeItem("currentUser");
+        localStorage.clear();
         window.location.href = "login.html"; 
     };
 
