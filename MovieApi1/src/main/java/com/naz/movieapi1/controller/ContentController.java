@@ -151,4 +151,14 @@ public class ContentController {
     public Content createCustom(@RequestBody Content content) {
         return service.createCustomContent(content);
     }
+
+    @GetMapping("/{id}/videos")
+    public List<VideoDto> getContentVideos(@PathVariable Integer id) {
+        Content content = service.getById(id);
+        if (content.getImdbId() == null) {
+            return Collections.emptyList();
+        }
+        // service katmanında TMDB'den veya ilgili servisten videoları çeken metodunuzu buraya bağlayabilirsiniz
+        return service.getContentVideos(content.getImdbId());
+    }
 }

@@ -757,4 +757,12 @@ public class ContentServiceImpl implements ContentService {
             }
         } catch (Exception ignored) {}
     }
+
+    @Override
+    public List<VideoDto> getContentVideos(String imdbId) {
+        if (imdbId == null || imdbId.isBlank()) {
+            return Collections.emptyList();
+        }
+        return fetchVideosByImdbId(imdbId);
+    }
 }

@@ -28,6 +28,9 @@ public interface ContentService {
     List<SeasonDto> getSeasons(String imdbId);
     SeasonDto getSeasonDetails(String imdbId, Integer season);
     List<VideoDto> getSeasonVideos(String imdbId, Integer season);
+    
+    // EKLENEN METOD İMZASI
+    List<VideoDto> getContentVideos(String imdbId);
 
     List<SearchResultDto> searchAll(String title);
     MovieDetailDto getDetails(Integer id);
