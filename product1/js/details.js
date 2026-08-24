@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (token.startsWith("Bearer ")) token = token.substring(7);
 
     try {
-        const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}`, {
+        const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}/details`, {
             headers: {
                 "Authorization": token ? `Bearer ${token}` : "",
                 "Content-Type": "application/json"
