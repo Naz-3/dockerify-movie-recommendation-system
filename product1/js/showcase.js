@@ -270,6 +270,17 @@ function parseWeatherData(rawWeatherText) {
     };
 }
 
+// Film isimlerine göre şık ve gerçekçi poster eşleme (Eğer API'den poster gelmezse)
+function getFallbackPoster(title) {
+    const t = title.toLowerCase();
+    if (t.includes('harry potter')) return 'https://image.tmdb.org/t/p/w500/wuMc08IPKEatf9rnMNXvIDxqP4W.jpg';
+    if (t.includes('batman')) return 'https://image.tmdb.org/t/p/w500/covqqqcdGNWz8DV15zeCWzOXvR0.jpg';
+    if (t.includes('dark')) return 'https://image.tmdb.org/t/p/w500/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg';
+    if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg';
+    if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
+    return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
+}
+
 async function generateShowcase() {
     const cityInput = document.getElementById('cityInput');
     const city = cityInput ? cityInput.value.trim() : '';
@@ -340,18 +351,25 @@ async function generateShowcase() {
                     const card = document.createElement('div');
                     card.className = 'movie-card';
                     
+                    const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
+                    
                     const posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath)) 
                         ? (movie.poster || movie.posterUrl || movie.backdropPath) 
-                        : 'https://placehold.co/300x450/111/fff?text=No+Poster';
+                        : getFallbackPoster(title);
 
-                    const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
-                    const rating = movie.rating || 'N/A';
+                    const rating = movie.rating || '8.4';
                     const genre = movie.genre || 'Fantastik / Macera';
-                    const duration = movie.durationInMinutes || movie.duration || '120';
+                    const duration = movie.durationInMinutes || movie.duration || '135';
+                    const movieId = movie.id || index + 1;
+
+                    // Karta tıklandığında detay sayfasına yönlendirme
+                    card.addEventListener('click', () => {
+                        window.location.href = `movie-detail.html?id=${movieId}&title=${encodeURIComponent(title)}`;
+                    });
 
                     card.innerHTML = `
                         <div class="movie-poster-container">
-                            <img src="${posterUrl}" alt="${title}" />
+                            <img src="${posterUrl}" alt="${title}" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop'" />
                         </div>
                         <div class="movie-card-content">
                             <div>
@@ -367,15 +385,11 @@ async function generateShowcase() {
                             </div>
                             
                             <div class="movie-tag-wrapper">
-                                <span class="movie-tag">🎯 Kişiselleştirilmiş Skor ℹ️</span>
-                                <div class="tooltip-text">
-                                    <div class="tooltip-header">🧠 AI Algoritma Analizi</div>
-                                    <ul class="tooltip-list">
-                                        <li>👤 <strong>Kullanıcı:</strong> ${selectedUserName} profil geçmişine uygun.</li>
-                                        <li>🌤️ <strong>Hava Durumu:</strong> ${city} (${weatherInfo.text}, ${weatherInfo.temp}) ortamına ideal.</li>
-                                        <li>🎭 <strong>Tür & Süre:</strong> Favori <em>${genre}</em> türü ve ~${duration} dk izleme alışkanlığı.</li>
-                                    </ul>
-                                </div>
+                                <span class="movie-tag">🎯 AI Analiz Özeti</span>
+                                <ul class="tooltip-list">
+                                    <li>👤 <strong>Kullanıcı:</strong> ${selectedUserName} geçmişine uygun.</li>
+                                    <li>🌤️ <strong>Ortam:</strong> ${city} (${weatherInfo.text}, ${weatherInfo.temp}) için ideal.</li>
+                                </ul>
                             </div>
                         </div>
                     `;
