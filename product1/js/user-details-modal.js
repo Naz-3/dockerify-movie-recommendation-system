@@ -28,6 +28,7 @@ async function openContentDetailModal(contentId) {
         if (!response.ok) throw new Error("İçerik çekilemedi: " + response.status);
 
         const data = await response.json();
+        console.log("Backend'den Gelen İçerik Verisi:", data); // <-- Bu satırı ekle
         renderUserModalContent(data);
         ensureUserVideoModalExists();
 
