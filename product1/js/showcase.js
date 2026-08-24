@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     
     // 1. LocalStorage'dan giriş yapan kullanıcının adını al
-    const activeUser = localStorage.getItem("username") || "user1"; 
+    const activeUser = localStorage.getItem("username") || "Kullanıcı"; 
 
     // 2. Ekrandaki etikete doğrudan kullanıcı adını yazdır
     const userDisplay = document.getElementById("activeUsernameDisplay");
@@ -177,6 +177,12 @@ function onUserChange(e) {
 
         localStorage.setItem('activeUserId', userId);
         localStorage.setItem('username', userName);
+
+        // Sol üstteki aktif kullanıcı adını anında güncelle
+        const userDisplay = document.getElementById("activeUsernameDisplay");
+        if (userDisplay) {
+            userDisplay.textContent = userName;
+        }
 
         if (userCity) {
             const cityInput = document.getElementById('cityInput');
@@ -316,31 +322,42 @@ async function generateShowcase() {
                     const card = document.createElement('div');
                     card.className = 'movie-card';
                     
+                    const posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath)) 
+                        ? (movie.poster || movie.posterUrl || movie.backdropPath) 
+                        : 'https://placehold.co/300x450/111/fff?text=No+Poster';
+
                     const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
                     const rating = movie.rating || 'N/A';
                     const genre = movie.genre || 'Fantastik / Macera';
                     const duration = movie.durationInMinutes || movie.duration || '120';
 
                     card.innerHTML = `
-                        <div class="movie-header">
-                            <span class="movie-number">#${index + 1} Öneri</span>
-                            <span class="movie-rating">⭐ ${rating}</span>
+                        <div class="movie-poster-container">
+                            <img src="${posterUrl}" alt="${title}" />
                         </div>
-                        <div class="movie-title">${title}</div>
-                        <div class="movie-meta">
-                            <span>🎭 ${genre}</span>
-                            <span>⏱️ ${duration} dk</span>
-                        </div>
-                        
-                        <div class="movie-tag-wrapper">
-                            <span class="movie-tag">🎯 Kişiselleştirilmiş Skor ℹ️</span>
-                            <div class="tooltip-text">
-                                <div class="tooltip-header">🧠 AI Algoritma Analizi</div>
-                                <ul class="tooltip-list">
-                                    <li>👤 <strong>Kullanıcı:</strong> ${selectedUserName} profil geçmişine uygun.</li>
-                                    <li>🌤️ <strong>Hava Durumu:</strong> ${city} (${weatherInfo.text}, ${weatherInfo.temp}) ortamına ideal.</li>
-                                    <li>🎭 <strong>Tür & Süre:</strong> Favori <em>${genre}</em> türü ve ~${duration} dk izleme alışkanlığı.</li>
-                                </ul>
+                        <div class="movie-card-content">
+                            <div>
+                                <div class="movie-header">
+                                    <span class="movie-number">#${index + 1} Öneri</span>
+                                    <span class="movie-rating">⭐ ${rating}</span>
+                                </div>
+                                <div class="movie-title" title="${title}">${title}</div>
+                                <div class="movie-meta">
+                                    <span>🎭 ${genre}</span>
+                                    <span>⏱️ ${duration} dk</span>
+                                </div>
+                            </div>
+                            
+                            <div class="movie-tag-wrapper">
+                                <span class="movie-tag">🎯 Kişiselleştirilmiş Skor ℹ️</span>
+                                <div class="tooltip-text">
+                                    <div class="tooltip-header">🧠 AI Algoritma Analizi</div>
+                                    <ul class="tooltip-list">
+                                        <li>👤 <strong>Kullanıcı:</strong> ${selectedUserName} profil geçmişine uygun.</li>
+                                        <li>🌤️ <strong>Hava Durumu:</strong> ${city} (${weatherInfo.text}, ${weatherInfo.temp}) ortamına ideal.</li>
+                                        <li>🎭 <strong>Tür & Süre:</strong> Favori <em>${genre}</em> türü ve ~${duration} dk izleme alışkanlığı.</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     `;
