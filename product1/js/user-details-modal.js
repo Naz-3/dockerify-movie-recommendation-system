@@ -151,42 +151,42 @@ function setupUserModalTabs(data) {
         seasonsBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>`;
     }
 
-// B) FRAGMANLAR TABI (Akıllı Arama: Ana obje + Sezonlar + Bölümler)
+// B) FRAGMANLAR TABI (Bölümler ve Sezonlar İçinden Video Yakalama)
     const trailerBox = document.getElementById("userTabTrailer");
     let allTrailers = [];
 
-    // 1. Ana objede dizi/liste şeklinde fragman var mı?
+    // 1. Ana objeden gelenler
     if (data.trailers && Array.isArray(data.trailers)) {
         allTrailers = data.trailers;
     } else if (data.videos && Array.isArray(data.videos)) {
         allTrailers = data.videos;
-    } 
-    // 2. Ana objede tekil fragman var mı?
-    else if (data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl) {
+    } else if (data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl) {
         allTrailers.push({
             title: (data.title || "İçerik") + " Fragman",
             videoUrl: data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl
         });
     }
 
-    // 3. Sezonlar veya Bölümler içerisinden fragmanları topla
+    // 2. Sezonlar ve Bölümler içerisindeki tüm video/fragman alanlarını tara
     const seasonsArr = data.seasons || data.seasonList || [];
     const episodesArr = data.episodes || data.episodeList || [];
 
     seasonsArr.forEach(season => {
-        if (season.trailerUrl || season.trailer || season.videoUrl || season.trailerKey) {
+        const sUrl = season.trailerKey || season.trailerUrl || season.trailer || season.videoUrl || season.videoKey;
+        if (sUrl) {
             allTrailers.push({
                 title: season.name || "Sezon Fragmanı",
-                videoUrl: season.trailerUrl || season.trailer || season.videoUrl || season.trailerKey
+                videoUrl: sUrl
             });
         }
         if (season.episodes && Array.isArray(season.episodes)) {
             season.episodes.forEach(ep => {
-                if (ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey) {
+                const epUrl = ep.trailerKey || ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey;
+                if (epUrl) {
                     allTrailers.push({
-                        title: `${ep.episodeNumber || ''}. Bölüm Fragmanı`,
-                        videoUrl: ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey,
-                        thumbnailUrl: ep.stillPath || ep.image
+                        title: `${ep.seasonNumber || 1}. Sezon ${ep.episodeNumber || ep.episode_number || 1}. Bölüm Fragmanı`,
+                        videoUrl: epUrl,
+                        thumbnailUrl: ep.stillPath || ep.image || data.poster
                     });
                 }
             });
@@ -194,16 +194,17 @@ function setupUserModalTabs(data) {
     });
 
     episodesArr.forEach(ep => {
-        if (ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey) {
+        const epUrl = ep.trailerKey || ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey;
+        if (epUrl) {
             allTrailers.push({
-                title: `${ep.seasonNumber || 1}. Sezon ${ep.episodeNumber || 1}. Bölüm`,
-                videoUrl: ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey,
-                thumbnailUrl: ep.stillPath || ep.image
+                title: `${ep.seasonNumber || 1}. Sezon ${ep.episodeNumber || ep.episode_number || 1}. Bölüm`,
+                videoUrl: epUrl,
+                thumbnailUrl: ep.stillPath || ep.image || data.poster
             });
         }
     });
 
-    // Benzersiz hale getirelim (aynı URL eklenmesin)
+    // Benzersiz hale getir
     allTrailers = Array.from(new Set(allTrailers.map(t => t.videoUrl)))
         .map(url => allTrailers.find(t => t.videoUrl === url));
 
@@ -211,10 +212,15 @@ function setupUserModalTabs(data) {
         trailerBox.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 10px;">
                 ${allTrailers.map(tr => {
-                    let vUrl = tr.videoUrl || tr.url;
+                    let vUrl = tr.videoUrl || "";
                     if (!vUrl.includes("http") && !vUrl.includes("/")) {
                         vUrl = `https://www.youtube.com/embed/${vUrl}`;
+                    } else if (vUrl.includes("watch?v=")) {
+                        vUrl = vUrl.replace("watch?v=", "embed/");
+                    } else if (vUrl.includes("youtu.be/")) {
+                        vUrl = vUrl.replace("youtu.be/", "youtube.com/embed/");
                     }
+
                     const thumb = tr.thumbnailUrl || data.poster || 'https://placehold.co/220x120/222/fff?text=Trailer';
                     
                     return `
