@@ -1,3 +1,7 @@
+// Kartlardan gelen çağrıyı modal açma fonksiyonuna bağlar
+window.openDetailModal = function(contentId) {
+    openContentDetailModal(contentId);
+};
 // Modal Açma Fonksiyonu
 async function openContentDetailModal(contentId) {
     const modal = document.getElementById("contentDetailModal") || document.getElementById("detailModal");
