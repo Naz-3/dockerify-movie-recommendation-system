@@ -26,6 +26,9 @@ public class Actor {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Column
+    private String profilePath;
+
     @JsonIgnore
     @ManyToMany(mappedBy = "actors")
     private List<Content> contents = new ArrayList<>();

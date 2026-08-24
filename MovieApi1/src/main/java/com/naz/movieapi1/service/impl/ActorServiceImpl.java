@@ -7,6 +7,9 @@ import com.naz.movieapi1.dto.search.MovieItemDto;
 import com.naz.movieapi1.service.ActorService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import com.naz.movieapi1.entity.Actor;
 import com.naz.movieapi1.repositories.ActorRepository;
 import com.naz.movieapi1.exception.MovieNotFoundException;
@@ -21,12 +24,44 @@ public class ActorServiceImpl implements ActorService {
 
     private final ContentRepository repository;
     private final ActorRepository actorRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${tmdb.api.key}")
+    private String tmdbApiKey;
 
     public ActorServiceImpl(ContentRepository repository,
                             ActorRepository actorRepository) {
 
         this.repository = repository;
         this.actorRepository = actorRepository;
+    }
+
+    // TMDB'den oyuncu profil fotoğrafını çeken yardımcı metod
+    private String fetchActorProfileImage(String actorName) {
+        String baseUrl = "https://api.themoviedb.org/3/search/person";
+        String imageBaseUrl = "https://image.tmdb.org/t/p/w500";
+
+        try {
+            String url = UriComponentsBuilder.fromHttpUrl(baseUrl)
+                    .queryParam("api_key", tmdbApiKey)
+                    .queryParam("query", actorName)
+                    .toUriString();
+
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+
+            if (response != null && response.containsKey("results")) {
+                List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
+                if (results != null && !results.isEmpty()) {
+                    String profilePath = (String) results.get(0).get("profile_path");
+                    if (profilePath != null) {
+                        return imageBaseUrl + profilePath;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("TMDB Fotoğraf çekme hatası: " + actorName + " - " + e.getMessage());
+        }
+        return null;
     }
 
     @Override
@@ -52,6 +87,18 @@ public class ActorServiceImpl implements ActorService {
 
                     actor.setId(actorEntity.getId());
                     actor.setName(actorName);
+
+                    // Veritabanında fotoğraf yoksa TMDB'den çekip kaydediyoruz
+                    String profilePath = actorEntity.getProfilePath();
+                    if (profilePath == null || profilePath.isEmpty()) {
+                        profilePath = fetchActorProfileImage(actorName);
+                        if (profilePath != null) {
+                            actorEntity.setProfilePath(profilePath);
+                            actorRepository.save(actorEntity);
+                        }
+                    }
+                    actor.setProfilePath(profilePath);
+
                     actor.setMovieCount(0);
                     actor.setSeriesCount(0);
                     actor.setHighestRating(0.0);
@@ -93,7 +140,6 @@ public class ActorServiceImpl implements ActorService {
             });
         }
         List<ActorDto> actors = new ArrayList<>(actorMap.values());
-        ///*map'i listeye ceviriyor, controllera liste döndürme daha uygun.*///
 
         actors.sort((a1, a2) ->
                 Integer.compare(a2.getMovieCount() + a2.getSeriesCount(),
@@ -183,6 +229,7 @@ public class ActorServiceImpl implements ActorService {
 
         dto.setId(actor.getId());
         dto.setName(actor.getName());
+        dto.setProfilePath(actor.getProfilePath());
         dto.setMovieCount(0);
         dto.setSeriesCount(0);
         dto.setHighestRating(0.0);
@@ -205,6 +252,7 @@ public class ActorServiceImpl implements ActorService {
                     ActorDto dto = new ActorDto();
                     dto.setId(actor.getId());
                     dto.setName(actor.getName());
+                    dto.setProfilePath(actor.getProfilePath());
                     dto.setContentCount(
                             actor.getContents().size()
                     );

@@ -75,8 +75,14 @@ function renderActors() {
         const highestRating = actor.highestRating ?? actor.topRating ?? "-";
         const topMovieTitle = actor.topMovie?.title || actor.topMovieTitle || actor.mostPopularMovie || "-";
 
+        // Oyuncu fotoğrafı varsa göster, yoksa baş harflerinden oluşan avatar göster
+        const avatarHtml = actor.profilePath 
+            ? `<img src="${escapeHtml(actor.profilePath)}" alt="${escapeHtml(actor.name)}">`
+            : `<div class="actor-avatar"><span>${initials(actor.name)}</span></div>`;
+
         return `
         <article class="actor-card">
+            ${avatarHtml}
             <div class="actor-info">
                 <h3>${escapeHtml(actor.name)}</h3>
                 <div class="actor-stats">

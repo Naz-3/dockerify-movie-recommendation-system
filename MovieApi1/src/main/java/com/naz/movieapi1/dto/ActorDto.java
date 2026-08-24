@@ -12,6 +12,7 @@ import java.util.List;
 public class ActorDto {
     private Long id;
     private String name;
+    private String profilePath;
     private int movieCount;
     private int seriesCount;
     private Double highestRating;
