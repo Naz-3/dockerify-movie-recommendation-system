@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const contentId = urlParams.get("id");
+    console.log("Gelen İçerik ID:", contentId); // ID yakalanıyor mu bakalım
 
     if (!contentId) {
         console.error("URL'de 'id' parametresi bulunamadı.");
@@ -11,16 +12,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (token.startsWith("Bearer ")) token = token.substring(7);
 
     try {
-        const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}/details`, {
+        // BURAYA DİKKAT: Hangi endpoint'e istek atıyorsun? 
+        // Eğer backend'den MovieDetailDto alıyorsan sonuna /details eklemelisin:
+        const url = `https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}/details`;
+        console.log("İstek atılan URL:", url);
+
+        const response = await fetch(url, {
             headers: {
                 "Authorization": token ? `Bearer ${token}` : "",
                 "Content-Type": "application/json"
             }
         });
 
+        console.log("Response Status:", response.status); // 200 mü dönüyor?
+
         if (!response.ok) throw new Error("Veri çekilemedi: " + response.status);
 
         const data = await response.json();
+        console.log("Backend'den gelen veri:", data); // Veri dolu mu geliyor?
+        
         renderAdminDetailsPage(data);
         ensureVideoModalExists();
 
@@ -28,7 +38,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Admin detay yükleme hatası:", error);
     }
 });
-
 function renderAdminDetailsPage(data) {
     if (!data) return;
 
