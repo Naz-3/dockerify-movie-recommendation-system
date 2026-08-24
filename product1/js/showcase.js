@@ -1,6 +1,10 @@
-const POSSIBLE_BASE_URLS = [
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases',
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases'
+const POSSIBLE_ENDPOINTS = [
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/suggest',
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases/suggest',
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/generate',
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases/generate',
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/recommend',
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases/recommend'
 ];
 const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
 let currentShowcaseId = null;
@@ -239,10 +243,9 @@ async function generateShowcase() {
     let response = null;
     let data = null;
 
-    // Doğru endpoint yolunu bulana kadar alternatifleri dener
-    for (const baseUrl of POSSIBLE_BASE_URLS) {
+    for (const endpointUrl of POSSIBLE_ENDPOINTS) {
         try {
-            const targetUrl = `${baseUrl}/suggest?city=${encodeURIComponent(city)}&userId=${userId}`;
+            const targetUrl = `${endpointUrl}?city=${encodeURIComponent(city)}&userId=${userId}`;
             const res = await fetch(targetUrl, {
                 method: 'GET',
                 headers: getAuthHeaders()
@@ -259,13 +262,13 @@ async function generateShowcase() {
                 break;
             }
         } catch (e) {
-            console.warn("Base URL denenirken hata:", baseUrl);
+            console.warn("Endpoint denenirken hata:", endpointUrl);
         }
     }
 
     if (!response || !data) {
         if (loading) loading.classList.add('hidden');
-        alert('Vitrin oluşturulurken bir hata meydana geldi: 404 - Endpoint bulunamadı.');
+        alert('Vitrin oluşturulamadı: Backend projenizdeki ShowcaseController içinde bu isteği karşılayan doğru URL mapping yolunu (endpoint) bulamadık. Lütfen Java tarafındaki @RequestMapping veya @GetMapping yolunu kontrol edin.');
         return;
     }
 
