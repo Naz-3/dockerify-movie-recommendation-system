@@ -1,9 +1,7 @@
 const BASE_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases';
 const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
-const TMDB_API_KEY = '5f2316e86427d2c3325c34e9e030c6a5'; // Alternatif genel poster fallback için public anahtar veya arama uç noktası
 let currentShowcaseId = null;
 
-// Popüler Türkiye & Dünya Şehirleri Listesi
 const defaultCities = [
     "Adana", "Ankara", "Antalya", "Aydın", "Bursa", "Denizli", "Diyarbakır", "Erzurum", 
     "Eskişehir", "Gaziantep", "İstanbul", "İzmir", "Kayseri", "Konya", "Malatya", "Mersin", 
@@ -102,28 +100,25 @@ function parseWeatherData(rawWeatherText) {
     return { icon: matched.icon, text: matched.text, temp, humidity };
 }
 
-// İçeriğin gerçek posterini TMDB üzerinden dinamik olarak çeken akıllı fonksiyon
 async function fetchRealMoviePoster(title) {
     if (!title) return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
     
     try {
-        // TMDB Multi-search API ile içeriği arıyoruz (Hem film hem dizi desteği)
         const response = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=3fd2be6f0c70a2a598f084ddfb75487c&query=${encodeURIComponent(title)}&language=tr-TR`);
-        const data = await response.json();
+        if (!response.ok) throw new Error("TMDB yanıt vermedi");
         
+        const data = await response.json();
         if (data && data.results && data.results.length > 0) {
-            // Posteri olan ilk geçerli sonucu alıyoruz
             const found = data.results.find(item => item.poster_path);
             if (found && found.poster_path) {
                 return `https://image.tmdb.org/t/p/w500${found.poster_path}`;
             }
         }
     } catch (e) {
-        console.warn("Dinamik poster çekilemedi:", title, e);
+        console.warn("TMDB Poster çekme hatası:", title, e);
     }
     
-    // Eğer TMDB'de bulunamazsa şık bir gri/siyah placeholder döner, rastgele yanlış afiş koymaz
-    return 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=500&auto=format&fit=crop';
+    return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
 }
 
 function ensureDetailModalExists() {
@@ -208,18 +203,8 @@ async function addCurrentMovieToWatchlist() {
                 success = true;
                 break;
             }
-
-            response = await fetch(`${endpoint}?title=${encodeURIComponent(activeModalMovie.title)}`, {
-                method: 'POST',
-                headers: { "Authorization": token ? `Bearer ${token}` : "" }
-            });
-
-            if (response.ok) {
-                success = true;
-                break;
-            }
         } catch (err) {
-            console.warn("Watchlist ekleme hatası:", err);
+            console.warn("Watchlist hata:", err);
         }
     }
 
@@ -259,7 +244,10 @@ async function generateShowcase() {
             return;
         }
 
-        if (!response.ok) throw new Error();
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Sunucu hatası: ${response.status} - ${errText}`);
+        }
 
         const data = await response.json();
         currentShowcaseId = data.showcaseId;
@@ -292,12 +280,10 @@ async function generateShowcase() {
             const movieItems = data.movieTitles || data.contents || data.movies || [];
 
             if (Array.isArray(movieItems) && movieItems.length > 0) {
-                // Her bir film/dizi için kartları oluştururken asenkron olarak gerçek posterini dinamik çekiyoruz
                 for (let index = 0; index < movieItems.length; index++) {
                     const movie = movieItems[index];
                     const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
                     
-                    // Önce gelen nesnede poster var mı bakalım, yoksa TMDB'den adıyla sorgulayıp gerçeğini alalım
                     let posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl)) 
                         ? (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl) 
                         : null;
@@ -353,7 +339,8 @@ async function generateShowcase() {
         if (previewCard) previewCard.classList.remove('hidden');
 
     } catch (error) {
-        alert('Vitrin oluşturulurken bir hata meydana geldi!');
+        console.error("Showcase generation error:", error);
+        alert(`Vitrin oluşturulurken bir hata meydana geldi: ${error.message}`);
     } finally {
         if (loading) loading.classList.add('hidden');
     }
