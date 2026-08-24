@@ -105,20 +105,61 @@ document.addEventListener("DOMContentLoaded", async () => {
             activeModalItem = item;
 
             // Başlık ve Tür
-            document.getElementById("modalTitle").innerText = item.title || 'İçerik Detayı';
-            document.getElementById("modalTypeBadge").innerText = (item.genre || item.type || item.contentType || 'MOVIE').toUpperCase();
+            document.getElementById("modalTitle").innerText = item.title || item.name || 'İçerik Detayı';
+            const typeStr = (item.contentType || item.type || item.genre || 'MOVIE').toUpperCase();
+            document.getElementById("modalTypeBadge").innerText = typeStr;
             
             // Poster / Banner Görseli
-            const posterSrc = item.poster || item.posterUrl || item.bannerUrl || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
+            const posterSrc = item.poster || item.posterUrl || item.bannerUrl || item.backdropPath || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
             document.getElementById("modalHero").style.backgroundImage = `url('${posterSrc}')`;
 
-            // Özet ve Başroller
-            document.getElementById("modalDescription").innerText = item.description || item.overview || "Bu içerik için özet açıklaması bulunmuyor.";
-            document.getElementById("modalCast").innerHTML = item.cast || item.actors ? `<strong>Başroller:</strong> ${item.cast || item.actors}` : '';
+            // Özet / Tanıtım Yazısı (Backend'deki tüm olası key alternatifleri kontrol edilir)
+            const overviewText = item.description || item.overview || item.summary || item.synopsis || item.plot || item.details;
+            document.getElementById("modalDescription").innerText = overviewText ? overviewText : "Bu içerik için özet açıklaması bulunmuyor.";
 
-            // İzlenme Hesabı & Slider
+            // Başroller / Oyuncular Kadrosu
+            const castText = item.cast || item.actors || item.actorsList || item.starring || item.credits;
+            const castElem = document.getElementById("modalCast");
+            if (castText) {
+                castElem.style.display = "block";
+                castElem.innerHTML = `<strong>Başroller:</strong> ${Array.isArray(castText) ? castText.join(', ') : castText}`;
+            } else {
+                castElem.style.display = "none";
+                castElem.innerHTML = "";
+            }
+
+            // Sezon & Bölüm Verilerinin Hazırlanması
+            let seasonsData = item.seasons || item.seasonList || [];
+            let episodesData = item.episodes || item.episodeList || [];
+
+            // Eğer seasons dizisi boş ancak episodes dizisinde seasonNumber varsa otomatik sezona grupla
+            if (seasonsData.length === 0 && episodesData.length > 0) {
+                const grouped = {};
+                episodesData.forEach(ep => {
+                    const sNum = ep.seasonNumber || ep.season || 1;
+                    if (!grouped[sNum]) grouped[sNum] = [];
+                    grouped[sNum].push(ep);
+                });
+                seasonsData = Object.keys(grouped).map(sNum => ({
+                    name: `${sNum}. Sezon`,
+                    episodes: grouped[sNum]
+                }));
+            }
+
+            // Dinamik Süre Hesaplama (Fix 120 dk yerine gerçek veri veya bölüm sayısı x 45dk)
+            let total = item.durationMinutes || item.duration || item.runtime || item.totalMinutes || 0;
+            if (!total || total === 120) {
+                if (seasonsData.length > 0) {
+                    const totalEps = seasonsData.reduce((acc, s) => acc + (s.episodes ? s.episodes.length : (s.episodesCount || 10)), 0);
+                    total = totalEps * 45; // Bölüm başı 45 dk hesabı
+                } else if (episodesData.length > 0) {
+                    total = episodesData.length * 45;
+                } else {
+                    total = 110; // Varsayılan film ortalama süresi
+                }
+            }
+
             const watched = item.watchedMinutes || item.progressMinutes || 0;
-            const total = item.durationMinutes || item.totalMinutes || 120;
             const percent = Math.min(Math.round((watched / total) * 100), 100);
 
             document.getElementById("interactiveProgressBar").value = percent;
@@ -126,14 +167,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // --- SEZON & BÖLÜMLER (Açılır Akordeon Yapısı) ---
             const epContainer = document.getElementById("episodesList");
-            const seasonsData = item.seasons || item.seasonList || [];
-            const episodesData = item.episodes || item.episodeList || [];
 
             if (seasonsData.length > 0) {
                 epContainer.innerHTML = seasonsData.map((s, idx) => `
                     <div class="season-accordion-item" style="margin-bottom:10px; background:rgba(255,255,255,0.05); border-radius:8px; overflow:hidden;">
                         <div class="season-header" onclick="toggleSeasonAccordion(this)" style="padding:14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.08);">
-                            <strong style="color:#fff; font-size:15px;">${s.name || s.title || `Sezon ${idx + 1}`}</strong>
+                            <strong style="color:#fff; font-size:15px;">${s.name || s.title || `${idx + 1}. Sezon`}</strong>
                             <span style="color:#aaa; font-size:12px;">${(s.episodes ? s.episodes.length : (s.episodesCount || 0))} Bölüm ▼</span>
                         </div>
                         <div class="season-episodes-list" style="display:none; padding:12px; background:rgba(0,0,0,0.2);">
@@ -158,14 +197,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Fragman Oynatıcı
             const trailerGrid = document.getElementById("trailersGrid");
-            const trailerUrl = item.trailerUrl || item.trailer;
+            const trailerUrl = item.trailerUrl || item.trailer || item.promoUrl;
             trailerGrid.innerHTML = trailerUrl 
                 ? `<iframe src="${formatVideoEmbed(trailerUrl)}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;" allowfullscreen></iframe>`
                 : "<p style='color:#aaa;'>Fragman videosu eklenmemiş.</p>";
 
             // Sahne Arkası (BTS) Oynatıcı
             const btsGrid = document.getElementById("btsGrid");
-            const btsUrl = item.btsUrl || item.behindTheScenesUrl;
+            const btsUrl = item.btsUrl || item.behindTheScenesUrl || item.extraUrl;
             btsGrid.innerHTML = btsUrl 
                 ? `<iframe src="${formatVideoEmbed(btsUrl)}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;" allowfullscreen></iframe>`
                 : "<p style='color:#aaa;'>Sahne arkası çekim videosu bulunamadı.</p>";
