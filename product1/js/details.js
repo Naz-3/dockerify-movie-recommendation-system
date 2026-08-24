@@ -17,22 +17,47 @@ document.addEventListener("DOMContentLoaded", async () => {
             "Content-Type": "application/json"
         };
 
-        // 1. Ana içerik detayını çek
+        // 1. Ana İçerik Detaylarını Çek
         const detailsUrl = `https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}/details`;
-        const detailsResponse = await fetch(detailsUrl, { headers });
-        if (!detailsResponse.ok) throw new Error("Detay verisi çekilemedi: " + detailsResponse.status);
-        const data = await detailsResponse.json();
+        const response = await fetch(detailsUrl, { headers });
 
-        // 2. Bölümleri ayrı olan endpoint'ten çek (/api/episodes/content/{contentId})
-        const episodesUrl = `https://dockerify-movie-recommendation-system.onrender.com/api/episodes/content/${contentId}`;
-        const episodesResponse = await fetch(episodesUrl, { headers });
-        if (episodesResponse.ok) {
-            const episodesData = await episodesResponse.json();
-            // Gelen bölümleri data objesine ekleyelim ki render fonksiyonu kullanabilsin
-            data.episodes = episodesData;
+        console.log("Response Status:", response.status);
+        if (!response.ok) throw new Error("Veri çekilemedi: " + response.status);
+
+        const data = await response.json();
+
+        // 2. Senkronize Edilen Bölümleri Ayrı Endpoint'ten Çek ve 'data.episodes' İçine Ekle
+        try {
+            const episodesUrl = `https://dockerify-movie-recommendation-system.onrender.com/api/episodes/content/${contentId}`;
+            const episodesResponse = await fetch(episodesUrl, { headers });
+            if (episodesResponse.ok) {
+                const episodesData = await episodesResponse.json();
+                data.episodes = episodesData; // Bölümleri doğrudan veri objesine bağlıyoruz
+            } else {
+                data.episodes = [];
+            }
+        } catch (epError) {
+            console.warn("Bölümler çekilemedi (Film olabilir veya hata oluştu):", epError);
+            data.episodes = [];
         }
 
-        console.log("Birleştirilmiş Veri:", data);
+        // Eğer backend'den hazır sezon listesi gelmediyse ama episodes tablosundan bölümler geldiyse, sezonları dinamik gruplayalım
+        if ((!data.seasons || data.seasons.length === 0) && data.episodes.length > 0) {
+            const grouped = {};
+            data.episodes.forEach(ep => {
+                const sNum = ep.seasonNumber || 1;
+                if (!grouped[sNum]) grouped[sNum] = [];
+                grouped[sNum].push(ep);
+            });
+
+            data.seasons = Object.keys(grouped).sort((a, b) => a - b).map(sNum => ({
+                name: `${sNum}. Sezon`,
+                seasonNumber: Number(sNum),
+                episodes: grouped[sNum]
+            }));
+        }
+
+        console.log("Backend'den gelen birleştirilmiş veri:", data);
         
         renderAdminDetailsPage(data);
         ensureVideoModalExists();
@@ -87,7 +112,6 @@ function renderAccordionSeasonsWithTrailers(data) {
 
     // Backend'den gelen olası sezon, bölüm veya video listelerini alalım
     let seasonsData = data.seasons || data.seasonList || data.seasonsList || data.contentSeasons || [];
-    let episodesData = data.episodes || data.episodeList || data.episodesList || [];
     let globalVideos = data.videos || data.trailers || [];
 
     // Eğer hiç sezon yok ama global videolar (konsolda gördüğümüz 'videos' dizisi) varsa, 
@@ -103,12 +127,24 @@ function renderAccordionSeasonsWithTrailers(data) {
                     thumbnailUrl: v.key ? `https://img.youtube.com/vi/${v.key}/hqdefault.jpg` : data.poster,
                     type: v.type || "Trailer"
                 })),
-                episodes: [] // Bölüm yoksa boş bırakıyoruz, kullanıcı yeni medya ekleyebilir
+                episodes: data.episodes || [] 
             }
         ];
     }
 
-    // Eğer hala sezon verisi oluşmadıysa ama içerik bir series/movie ise boş bir 1. Sezon oluşturalım ki kullanıcı "Yeni Medya Ekle" diyebilsin
+    // Eğer hala sezon verisi oluşmadıysa ama episodes doluysa, bölümleri 1. sezona bağlayalım
+    if ((!seasonsData || seasonsData.length === 0) && data.episodes && data.episodes.length > 0) {
+        seasonsData = [
+            {
+                name: "1. Sezon",
+                seasonNumber: 1,
+                trailers: [],
+                episodes: data.episodes
+            }
+        ];
+    }
+
+    // Eğer hala sezon verisi oluşmadıysa boş bir 1. Sezon oluşturalım ki kullanıcı "Yeni Medya Ekle" diyebilsin
     if (!seasonsData || seasonsData.length === 0) {
         seasonsData = [
             {
@@ -127,6 +163,10 @@ function renderAccordionSeasonsWithTrailers(data) {
             const isFirst = idx === 0;
             const seasonId = `season-content-${idx}`;
             const seasonTrailers = season.trailers || season.videos || [];
+            // Sezonun kendi episodes dizisi yoksa ama genel data.episodes içinde bu sezona ait bölüm varsa filtreleyelim
+            const seasonEpisodes = season.episodes && season.episodes.length > 0 
+                ? season.episodes 
+                : (data.episodes ? data.episodes.filter(ep => (ep.seasonNumber || 1) === (season.seasonNumber || idx + 1)) : []);
 
             return `
                 <div class="season-item">
@@ -138,7 +178,7 @@ function renderAccordionSeasonsWithTrailers(data) {
                             ${season.name || season.title || `${idx + 1}. Sezon`}
                         </span>
                         <span style="color: var(--text2); font-size: 13px; font-weight: 500;">
-                            ${(season.episodes ? season.episodes.length : 0)} Bölüm
+                            ${seasonEpisodes.length} Bölüm
                         </span>
                     </div>
 
@@ -192,13 +232,13 @@ function renderAccordionSeasonsWithTrailers(data) {
 
                         <!-- Bölümler Listesi -->
                         <div class="episode-list">
-                            ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => {
+                            ${seasonEpisodes.length > 0 ? seasonEpisodes.map(ep => {
                                 const epTitle = ep.title || ep.name || 'Bölüm';
                                 const epNum = ep.episodeNumber || ep.episode_number || 1;
-                                const epDesc = ep.description || ep.overview || 'Açıklama bulunmuyor.';
-                                const epRating = ep.imdbRating || ep.voteAverage || '7.5';
-                                const epDuration = ep.durationMinutes || ep.duration || 45;
-                                const epImg = ep.stillPath || ep.image || data.poster || 'https://placehold.co/140x90/1e232d/ffffff?text=No+Image';
+                                const epDesc = ep.plot || ep.description || ep.overview || 'Açıklama bulunmuyor.';
+                                const epRating = ep.rating || ep.imdbRating || ep.voteAverage || '7.5';
+                                const epDuration = ep.runtime || ep.durationMinutes || ep.duration || '45 dk';
+                                const epImg = ep.poster || ep.stillPath || ep.image || data.poster || 'https://placehold.co/140x90/1e232d/ffffff?text=No+Image';
 
                                 return `
                                     <div class="episode-item">
@@ -208,7 +248,7 @@ function renderAccordionSeasonsWithTrailers(data) {
                                             <p>${epDesc}</p>
                                             <div class="episode-meta">
                                                 <span>⭐ ${epRating}</span>
-                                                <span>⏱️ ${epDuration} dk</span>
+                                                <span>⏱️ ${epDuration}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -288,7 +328,7 @@ window.closeVideoModal = function() {
     document.body.style.overflow = "auto";
 };
 
-// Yeni Medya Ekle Modal Tetikleyicisi (Gerekirse özelleştirilebilir)
+// Yeni Medya Ekle Modal Tetikleyicisi
 window.openAddMediaModal = function(seasonNumber) {
     const addMediaModal = document.getElementById("addMediaModal");
     if (addMediaModal) {
