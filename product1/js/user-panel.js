@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.body.insertAdjacentHTML("beforeend", modalHTML);
     }
 
-    // Modal Penceresini Açma ve API Verisini Yükleme
+// Modal Penceresini Açma ve API Verisini Yükleme
     window.openDetailModal = async function(id) {
         const overlay = document.getElementById("detailModalOverlay");
         if (overlay) overlay.classList.add("active");
@@ -104,25 +104,27 @@ document.addEventListener("DOMContentLoaded", async () => {
             const item = await response.json();
             activeModalItem = item;
 
-            // Başlık ve Tür
+            // Başlık ve Tür tespiti
+            const isSeries = (item.contentType || item.type || item.genre || '').toUpperCase().includes('SERIES') || 
+                             (item.contentType || item.type || '').toUpperCase().includes('TV');
+            
             document.getElementById("modalTitle").innerText = item.title || item.name || 'İçerik Detayı';
-            const typeStr = (item.contentType || item.type || item.genre || 'MOVIE').toUpperCase();
-            document.getElementById("modalTypeBadge").innerText = typeStr;
+            document.getElementById("modalTypeBadge").innerText = isSeries ? 'SERIES' : 'MOVIE';
             
             // Poster / Banner Görseli
-            const posterSrc = item.poster || item.posterUrl || item.bannerUrl || item.backdropPath || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
+            const posterSrc = item.poster || item.posterUrl || item.bannerUrl || item.backdropPath || item.backdrop_path || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
             document.getElementById("modalHero").style.backgroundImage = `url('${posterSrc}')`;
 
-            // Özet / Tanıtım Yazısı (Backend'deki tüm olası key alternatifleri kontrol edilir)
+            // Özet / Tanıtım Yazısı
             const overviewText = item.description || item.overview || item.summary || item.synopsis || item.plot || item.details;
             document.getElementById("modalDescription").innerText = overviewText ? overviewText : "Bu içerik için özet açıklaması bulunmuyor.";
 
             // Başroller / Oyuncular Kadrosu
             const castText = item.cast || item.actors || item.actorsList || item.starring || item.credits;
             const castElem = document.getElementById("modalCast");
-            if (castText) {
+            if (castText && ((Array.isArray(castText) && castText.length > 0) || String(castText).trim() !== '')) {
                 castElem.style.display = "block";
-                castElem.innerHTML = `<strong>Başroller:</strong> ${Array.isArray(castText) ? castText.join(', ') : castText}`;
+                castElem.innerHTML = `<strong>Başroller:</strong> ${Array.isArray(castText) ? castText.map(c => c.name || c).join(', ') : castText}`;
             } else {
                 castElem.style.display = "none";
                 castElem.innerHTML = "";
@@ -132,11 +134,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             let seasonsData = item.seasons || item.seasonList || [];
             let episodesData = item.episodes || item.episodeList || [];
 
-            // Eğer seasons dizisi boş ancak episodes dizisinde seasonNumber varsa otomatik sezona grupla
+            // Eğer seasons dizisi boşsa ancak episodes verisi varsa sezona göre grupla
             if (seasonsData.length === 0 && episodesData.length > 0) {
                 const grouped = {};
                 episodesData.forEach(ep => {
-                    const sNum = ep.seasonNumber || ep.season || 1;
+                    const sNum = ep.seasonNumber || ep.season_number || ep.season || 1;
                     if (!grouped[sNum]) grouped[sNum] = [];
                     grouped[sNum].push(ep);
                 });
@@ -146,16 +148,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }));
             }
 
-            // Dinamik Süre Hesaplama (Fix 120 dk yerine gerçek veri veya bölüm sayısı x 45dk)
+            // Dinamik Süre Hesaplama
             let total = item.durationMinutes || item.duration || item.runtime || item.totalMinutes || 0;
             if (!total || total === 120) {
                 if (seasonsData.length > 0) {
                     const totalEps = seasonsData.reduce((acc, s) => acc + (s.episodes ? s.episodes.length : (s.episodesCount || 10)), 0);
-                    total = totalEps * 45; // Bölüm başı 45 dk hesabı
+                    total = totalEps * 45;
                 } else if (episodesData.length > 0) {
                     total = episodesData.length * 45;
                 } else {
-                    total = 110; // Varsayılan film ortalama süresi
+                    total = isSeries ? 450 : 110;
                 }
             }
 
@@ -165,7 +167,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById("interactiveProgressBar").value = percent;
             updateWatchBarUI(watched, total, percent);
 
-            // --- SEZON & BÖLÜMLER (Açılır Akordeon Yapısı) ---
+            // --- SEZON & BÖLÜMLER LİSTELEME ---
             const epContainer = document.getElementById("episodesList");
 
             if (seasonsData.length > 0) {
@@ -173,7 +175,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div class="season-accordion-item" style="margin-bottom:10px; background:rgba(255,255,255,0.05); border-radius:8px; overflow:hidden;">
                         <div class="season-header" onclick="toggleSeasonAccordion(this)" style="padding:14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.08);">
                             <strong style="color:#fff; font-size:15px;">${s.name || s.title || `${idx + 1}. Sezon`}</strong>
-                            <span style="color:#aaa; font-size:12px;">${(s.episodes ? s.episodes.length : (s.episodesCount || 0))} Bölüm ▼</span>
+                            <span class="acc-icon" style="color:#aaa; font-size:12px;">${(s.episodes ? s.episodes.length : (s.episodesCount || 0))} Bölüm ▼</span>
                         </div>
                         <div class="season-episodes-list" style="display:none; padding:12px; background:rgba(0,0,0,0.2);">
                             ${renderEpisodes(s.episodes || [])}
@@ -185,67 +187,81 @@ document.addEventListener("DOMContentLoaded", async () => {
             } else {
                 epContainer.innerHTML = `
                     <div style="padding:15px; background:rgba(255,255,255,0.02); border-radius:8px;">
-                        <p style='color:#aaa;'>Bu içerik bir filmdir veya bölüm verisi eklenmemiştir.</p>
-                        ${item.videoUrl || item.previewUrl ? `
-                            <div style="margin-top:10px;">
-                                <strong style="color:#fff;">Film Önizleme / Fragman:</strong>
-                                <iframe src="${formatVideoEmbed(item.videoUrl || item.previewUrl)}" style="width:100%; aspect-ratio:16/9; margin-top:8px; border:none; border-radius:8px;" allowfullscreen></iframe>
-                            </div>
-                        ` : ''}
+                        <p style='color:#aaa;'>${isSeries ? 'Bu diziye ait henüz sezon veya bölüm bilgisi bulunamadı.' : 'Bu içerik bir filmdir.'}</p>
                     </div>`;
             }
 
+            // TMDB / Youtube Fragman & BTS Çıkarma
+            const videosList = item.videos?.results || item.videos || [];
+            const trailerObj = videosList.find(v => (v.type === "Trailer" || v.type === "Teaser") && v.site === "YouTube") || {};
+            const btsObj = videosList.find(v => (v.type === "Behind the Scenes" || v.type === "Featurette") && v.site === "YouTube") || {};
+
+            const trailerUrl = item.trailerUrl || item.trailer || (trailerObj.key ? `https://www.youtube.com/embed/${trailerObj.key}` : null);
+            const btsUrl = item.btsUrl || item.behindTheScenesUrl || (btsObj.key ? `https://www.youtube.com/embed/${btsObj.key}` : null);
+
             // Fragman Oynatıcı
             const trailerGrid = document.getElementById("trailersGrid");
-            const trailerUrl = item.trailerUrl || item.trailer || item.promoUrl;
             trailerGrid.innerHTML = trailerUrl 
                 ? `<iframe src="${formatVideoEmbed(trailerUrl)}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;" allowfullscreen></iframe>`
-                : "<p style='color:#aaa;'>Fragman videosu eklenmemiş.</p>";
+                : "<p style='color:#aaa;'>Bu içerik için henüz fragman eklenmemiş.</p>";
 
             // Sahne Arkası (BTS) Oynatıcı
             const btsGrid = document.getElementById("btsGrid");
-            const btsUrl = item.btsUrl || item.behindTheScenesUrl || item.extraUrl;
             btsGrid.innerHTML = btsUrl 
                 ? `<iframe src="${formatVideoEmbed(btsUrl)}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;" allowfullscreen></iframe>`
-                : "<p style='color:#aaa;'>Sahne arkası çekim videosu bulunamadı.</p>";
+                : "<p style='color:#aaa;'>Bu içerik için henüz sahne arkası videosu eklenmemiş.</p>";
 
         } catch (error) {
             console.error("Detay Çekme Hatası:", error);
             document.getElementById("modalTitle").innerText = "Hata Oluştu";
-            document.getElementById("episodesList").innerHTML = "<p style='color:#ef4444;'>İçerik detayları veritabanından yüklenemedi.</p>";
+            document.getElementById("episodesList").innerHTML = "<p style='color:#ef4444;'>İçerik detayları yüklenemedi.</p>";
         }
     };
 
     // Bölümleri Poster, Açıklama ve Video ile Render Etme Fonksiyonu
+// Bölüm Açıklamalarını Çeken ve Render Eden Fonksiyon
     function renderEpisodes(epList) {
         if (!epList || epList.length === 0) return "<p style='color:#888;'>Bu sezona ait bölüm bulunamadı.</p>";
 
         return epList.map((ep, idx) => {
-            const epStill = ep.stillPath || ep.stillUrl || ep.poster || 'https://placehold.co/160x90?text=B%C3%B6l%C3%BCm';
+            const epStill = ep.stillPath || ep.stillUrl || ep.still_path || ep.poster || 'https://placehold.co/160x90?text=B%C3%B6l%C3%BCm';
+            const epOverview = ep.overview || ep.description || ep.summary || ep.plot;
+            const duration = ep.durationMinutes || ep.runtime || ep.duration || 45;
+
             return `
                 <div style="display:flex; gap:12px; margin-bottom:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:6px; align-items:flex-start;">
-                    <img src="${epStill}" style="width:120px; aspect-ratio:16/9; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/160x90?text=B%C3%B6l%C3%BCm'">
+                    <img src="${epStill.startsWith('/') ? 'https://image.tmdb.org/t/p/w300' + epStill : epStill}" style="width:130px; aspect-ratio:16/9; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/160x90?text=B%C3%B6l%C3%BCm'">
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong style="color:#fff; font-size:14px;">${idx + 1}. ${ep.title || ep.name || 'Bölüm'}</strong>
-                            <span style="color:#888; font-size:12px;">${ep.durationMinutes || ep.duration || '45 dk'}</span>
+                            <strong style="color:#fff; font-size:14px;">${ep.episodeNumber || ep.episode_number || idx + 1}. ${ep.title || ep.name || 'Bölüm'}</strong>
+                            <span style="color:#888; font-size:12px;">${duration} dk</span>
                         </div>
-                        <p style="font-size:12px; color:#aaa; margin-top:4px;">${ep.description || ep.overview || 'Bölüm açıklaması mevcut değil.'}</p>
-                        ${ep.videoUrl || ep.previewUrl ? `
-                            <a href="${ep.videoUrl || ep.previewUrl}" target="_blank" style="display:inline-block; font-size:11px; color:#e50914; margin-top:6px; text-decoration:underline;">Bölüm Önizlemesini İzle ▶</a>
-                        ` : ''}
+                        <p style="font-size:12px; color:#aaa; margin-top:6px; line-height:1.4;">${epOverview ? epOverview : 'Bu bölüm için henüz detaylı özet açıklaması eklenmemiştir.'}</p>
                     </div>
                 </div>
             `;
         }).join('');
-    }
+    };
 
-    // Sezon Akordeon Açıp/Kapatma
+    // Aynı Anda Sadece Tek Sezonu Açan Akordeon Fonksiyonu
     window.toggleSeasonAccordion = function(headerElem) {
-        const body = headerElem.nextElementSibling;
-        const isHidden = body.style.display === "none";
-        body.style.display = isHidden ? "block" : "none";
-        headerElem.querySelector("span").innerText = headerElem.querySelector("span").innerText.replace(isHidden ? '▼' : '▲', isHidden ? '▲' : '▼');
+        const currentBody = headerElem.nextElementSibling;
+        const isOpening = currentBody.style.display === "none";
+
+        // Açık olan tüm diğer sezonları kapat
+        document.querySelectorAll(".season-episodes-list").forEach(list => {
+            list.style.display = "none";
+        });
+        document.querySelectorAll(".acc-icon").forEach(icon => {
+            icon.innerText = icon.innerText.replace('▲', '▼');
+        });
+
+        // Tıklanan sezonu duruma göre aç veya kapat
+        if (isOpening) {
+            currentBody.style.display = "block";
+            const icon = headerElem.querySelector(".acc-icon");
+            if (icon) icon.innerText = icon.innerText.replace('▼', '▲');
+        }
     };
 
     // İzleme Çubuğunda Oynama Yapıldığında Çalışan Fonksiyon
