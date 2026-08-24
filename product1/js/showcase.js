@@ -564,6 +564,6 @@ async function approveShowcase() {
         }
     } catch (error) {
         console.error('Hata:', error);
-        alert('Sunucuya bağlanılamadı!');
+        alert('Sunucuya bağlanılamadı.');
     }
 }
