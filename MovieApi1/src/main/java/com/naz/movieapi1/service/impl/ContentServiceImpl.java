@@ -104,20 +104,24 @@ public class ContentServiceImpl implements ContentService {
         return dto;
     }
 
+    @Override
     public Content getById(Integer id) {
         return repository.findById(id)
                 .orElseThrow(() -> new MovieNotFoundException("İçerik bulunamadı."));
     }
 
+    @Override
     public Content save(Content content) {
         return repository.save(content);
     }
 
+    @Override
     public void delete(Integer id) {
         Content content = getById(id);
         repository.delete(content);
     }
 
+    @Override
     public Content update(Integer id, Content updated) {
         Content content = getById(id);
         content.setTitle(updated.getTitle());
@@ -423,12 +427,14 @@ public class ContentServiceImpl implements ContentService {
         return contentsToSave;
     }
 
+    @Override
     public Content updateStatus(Integer id, String status) {
         Content content = getById(id);
         content.setStatus(status);
         return repository.save(content);
     }
 
+    @Override
     public Content syncMovie(Integer id) {
         Content content = getById(id);
         if (content.getImdbId() == null || content.getImdbId().isBlank()) {
@@ -468,6 +474,7 @@ public class ContentServiceImpl implements ContentService {
         return repository.save(content);
     }
 
+    @Override
     public void syncAllContents() {
         List<Content> contents = repository.findAll();
         for (Content content : contents) {

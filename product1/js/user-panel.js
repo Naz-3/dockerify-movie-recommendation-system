@@ -82,53 +82,53 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // YouTube Embed Link Çıkarıcı Yardımcı Fonksiyon
-function extractVideoUrl(item, type = 'trailer') {
-    if (!item) return null;
+    function extractVideoUrl(item, type = 'trailer') {
+        if (!item) return null;
 
-    // 1. Doğrudan Nesne Üzerindeki Olası Tüm Key İsimleri (Admin & Backend Uyumluluğu)
-    let candidate = null;
-    if (type === 'trailer') {
-        candidate = item.trailerUrl || item.trailer || item.trailerKey || item.youtubeKey || item.youtube_key || item.videoUrl || item.promoUrl;
-    } else {
-        candidate = item.btsUrl || item.behindTheScenesUrl || item.extraUrl || item.btsKey || item.behind_the_scenes;
-    }
-
-    // 2. TMDB 'videos' nesnesi veya 'results' dizisi
-    const videosList = item.videos?.results || item.videos || item.videoList || [];
-    if (!candidate && Array.isArray(videosList) && videosList.length > 0) {
-        let targetVideo = null;
+        // 1. Doğrudan Nesne Üzerindeki Olası Tüm Key İsimleri (Admin & Backend Uyumluluğu)
+        let candidate = null;
         if (type === 'trailer') {
-            targetVideo = videosList.find(v => 
-                v.type?.toLowerCase().includes("trailer") || 
-                v.type?.toLowerCase().includes("teaser")
-            ) || videosList[0];
+            candidate = item.trailerUrl || item.trailer || item.trailerKey || item.youtubeKey || item.youtube_key || item.videoUrl || item.promoUrl;
         } else {
-            targetVideo = videosList.find(v => 
-                v.type?.toLowerCase().includes("behind") || 
-                v.type?.toLowerCase().includes("featurette") || 
-                v.type?.toLowerCase().includes("clip")
-            );
+            candidate = item.btsUrl || item.behindTheScenesUrl || item.extraUrl || item.btsKey || item.behind_the_scenes;
         }
-        if (targetVideo) {
-            candidate = targetVideo.key || targetVideo.youtubeKey || targetVideo.url || targetVideo.id;
+
+        // 2. TMDB 'videos' nesnesi veya 'results' dizisi
+        const videosList = item.videos?.results || item.videos || item.videoList || [];
+        if (!candidate && Array.isArray(videosList) && videosList.length > 0) {
+            let targetVideo = null;
+            if (type === 'trailer') {
+                targetVideo = videosList.find(v => 
+                    v.type?.toLowerCase().includes("trailer") || 
+                    v.type?.toLowerCase().includes("teaser")
+                ) || videosList[0];
+            } else {
+                targetVideo = videosList.find(v => 
+                    v.type?.toLowerCase().includes("behind") || 
+                    v.type?.toLowerCase().includes("featurette") || 
+                    v.type?.toLowerCase().includes("clip")
+                );
+            }
+            if (targetVideo) {
+                candidate = targetVideo.key || targetVideo.youtubeKey || targetVideo.url || targetVideo.id;
+            }
         }
+
+        if (!candidate) return null;
+
+        // 3. YouTube Embed Formatına Dönüştürme
+        candidate = String(candidate).trim();
+        if (candidate.includes('youtube.com/embed/')) return candidate;
+        if (candidate.includes('watch?v=')) return candidate.replace('watch?v=', 'embed/').split('&')[0];
+        if (candidate.includes('youtu.be/')) return candidate.replace('youtu.be/', 'youtube.com/embed/').split('?')[0];
+        
+        // Eğer sadece ID ise (örneğin: d9MyW72ELq0)
+        if (!candidate.startsWith('http')) {
+            return `https://www.youtube.com/embed/${candidate}`;
+        }
+
+        return candidate;
     }
-
-    if (!candidate) return null;
-
-    // 3. YouTube Embed Formatına Dönüştürme
-    candidate = String(candidate).trim();
-    if (candidate.includes('youtube.com/embed/')) return candidate;
-    if (candidate.includes('watch?v=')) return candidate.replace('watch?v=', 'embed/').split('&')[0];
-    if (candidate.includes('youtu.be/')) return candidate.replace('youtu.be/', 'youtube.com/embed/').split('?')[0];
-    
-    // Eğer sadece ID ise (örneğin: d9MyW72ELq0)
-    if (!candidate.startsWith('http')) {
-        return `https://www.youtube.com/embed/${candidate}`;
-    }
-
-    return candidate;
-}
 
     // Modal Penceresini Açma ve API Verisini Yükleme
     window.openDetailModal = async function(id) {

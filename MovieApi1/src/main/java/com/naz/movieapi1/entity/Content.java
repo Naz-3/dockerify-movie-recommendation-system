@@ -75,4 +75,10 @@ public class Content {
     )
     @JsonIgnore //content çekildiğinde WatchHistory listesine girip devasa döngü yaratmasını engellesin
     private List<WatchHistory> watchHistories = new ArrayList<>();
+
+    @Column(name = "trailer_key")
+        private String trailerKey;
+
+        @Column(name = "bts_key")
+        private String btsKey;
 }

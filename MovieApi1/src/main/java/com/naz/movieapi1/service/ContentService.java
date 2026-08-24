@@ -13,7 +13,7 @@ import java.util.List;
 public interface ContentService {
 
     List<Content> getAll();
-    List<MovieDetailDto> getAllDetails(); // Yeni metot eklendi
+    List<MovieDetailDto> getAllDetails();
     Content getById(Integer id);
     Content save(Content content);
     void delete(Integer id);
