@@ -28,7 +28,7 @@ async function openContentDetailModal(contentId) {
         if (!response.ok) throw new Error("İçerik çekilemedi: " + response.status);
 
         const data = await response.json();
-        console.log("Backend'den Gelen İçerik Verisi:", data); // <-- Bu satırı ekle
+        console.log("Backend'den Gelen İçerik Verisi:", data);
         renderUserModalContent(data);
         ensureUserVideoModalExists();
 
@@ -48,7 +48,7 @@ function renderUserModalContent(data) {
     }
 
     setUserText("modalTitle", data.title || data.name);
-    setUserText("modalOverview", data.description || data.overview || data.synopsis);
+    setUserText("modalOverview", data.description || data.overview || data.plot || data.synopsis);
 
     const typeBadge = document.getElementById("modalTypeBadge");
     if (typeBadge) {
@@ -107,13 +107,11 @@ function setupUserModalTabs(data) {
 
     if (seasonsData && seasonsData.length > 0) {
         seasonsBox.innerHTML = seasonsData.map((season, idx) => {
-            const isFirst = idx === 0; // Sadece ilk sezon açık başlar
+            const isFirst = idx === 0;
             const seasonId = `user-season-content-${idx}`;
 
             return `
                 <div style="background: #11141a; border: 1px solid #1e232d; border-radius: 8px; margin-bottom: 12px; overflow: hidden;">
-                    
-                    <!-- SEZON AKORDEON BUTONU -->
                     <button type="button" onclick="toggleUserSeasonAccordion('${seasonId}', this)" 
                         style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #151922; border: none; cursor: pointer; outline: none;">
                         <span style="color: #9ab; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
@@ -125,7 +123,6 @@ function setupUserModalTabs(data) {
                         </span>
                     </button>
 
-                    <!-- SEZON İÇERİĞİ (SADECE BÖLÜMLER LİSTESİ) -->
                     <div id="${seasonId}" class="user-season-episodes-container" style="display: ${isFirst ? 'block' : 'none'}; padding: 14px;">
                         <div style="display: flex; flex-direction: column; gap: 10px;">
                             ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => {
@@ -154,58 +151,65 @@ function setupUserModalTabs(data) {
         seasonsBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>`;
     }
 
-    // B) FRAGMANLAR TABI (Tüm fragmanlar / video bağlantıları burada listelenir)
+    // B) FRAGMANLAR TABI
     const trailerBox = document.getElementById("userTabTrailer");
-    let allTrailers = [];
-    
-    // Eğer sezonsal fragmanlar veya genel fragman listeleri varsa toparlayalım
-    if (data.trailers && Array.isArray(data.trailers)) {
-        allTrailers = data.trailers;
-    } else if (data.videos && Array.isArray(data.videos)) {
-        allTrailers = data.videos;
-    }
+    const trailerSource = data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl;
 
-    if (allTrailers.length > 0) {
+    if (trailerSource) {
+        let embedUrl = trailerSource;
+        // Eğer sadece YouTube video key geldiyse (örn: "dQw4w9WgXcQ")
+        if (!trailerSource.includes("http") && !trailerSource.includes("/")) {
+            embedUrl = `https://www.youtube.com/embed/${trailerSource}`;
+        } else if (trailerSource.includes("watch?v=")) {
+            embedUrl = trailerSource.replace("watch?v=", "embed/");
+        } else if (trailerSource.includes("youtu.be/")) {
+            embedUrl = trailerSource.replace("youtu.be/", "youtube.com/embed/");
+        }
+
         trailerBox.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 10px;">
-                ${allTrailers.map(tr => `
-                    <div onclick="openUserVideoModal('${tr.videoUrl || tr.url}', '${tr.title || 'Fragman'}')" style="background: #151922; border: 1px solid #1e232d; border-radius: 8px; overflow: hidden; cursor: pointer;">
-                        <div style="position: relative; height: 120px; background: #0b0d12;">
-                            <img src="${tr.thumbnailUrl || data.poster || 'https://placehold.co/220x120/222/fff?text=Trailer'}" style="width: 100%; height: 100%; object-fit: cover;" />
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: rgba(229, 9, 20, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;">▶</div>
-                        </div>
-                        <div style="padding: 10px;">
-                            <p style="color: #fff; font-size: 12px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${tr.title || 'Fragman'}</p>
-                        </div>
-                    </div>
-                `).join('')}
+            <div style="width: 100%; aspect-ratio: 16/9; margin-top: 10px;">
+                <iframe width="100%" height="100%" src="${embedUrl}" frameborder="0" allowfullscreen style="border-radius: 6px;"></iframe>
             </div>
         `;
     } else {
-        // Tekil fragman URL'si varsa
-        const trailerUrl = data.trailerUrl || data.trailer || data.videoUrl;
-        if (trailerUrl) {
-            let embedUrl = trailerUrl;
-            if (trailerUrl.includes("watch?v=")) embedUrl = trailerUrl.replace("watch?v=", "embed/");
-            else if (trailerUrl.includes("youtu.be/")) embedUrl = trailerUrl.replace("youtu.be/", "youtube.com/embed/");
-
-            trailerBox.innerHTML = `
-                <div style="width: 100%; aspect-ratio: 16/9; margin-top: 10px;">
-                    <iframe width="100%" height="100%" src="${embedUrl}" frameborder="0" allowfullscreen style="border-radius: 6px;"></iframe>
-                </div>
-            `;
-        } else {
-            trailerBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Bu içerik için fragman eklenmemiş.</p>`;
-        }
+        // Fragman verisi yoksa kullanıcıyı YouTube'da aratması için yönlendiren şık bir arama butonu sunalım
+        const searchTitle = encodeURIComponent((data.title || "Movie") + " official trailer");
+        trailerBox.innerHTML = `
+            <div style="text-align: center; padding: 30px 10px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
+                <p style="color: #888; font-size: 13px; margin: 0;">Bu içerik için sisteme kayıtlı bir fragman anahtarı bulunmuyor.</p>
+                <a href="https://www.youtube.com/results?search_query=${searchTitle}" target="_blank" 
+                   style="background: #e50914; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                    ▶ YouTube'da Ara
+                </a>
+            </div>
+        `;
     }
 
     // C) SAHNE ARKASI (BTS) TABI
     const btsBox = document.getElementById("userTabBts");
-    const btsUrl = data.btsUrl || data.behindTheScenes;
-    if (btsUrl) {
-        btsBox.innerHTML = `<p style="color: #ccc; font-size: 13px; padding: 10px 0;">Sahne Arkası Videosu: <a href="${btsUrl}" target="_blank" style="color: #e50914;">İzle</a></p>`;
+    const btsSource = data.btsKey || data.btsUrl || data.behindTheScenes;
+
+    if (btsSource) {
+        let btsEmbed = btsSource;
+        if (!btsSource.includes("http") && !btsSource.includes("/")) {
+            btsEmbed = `https://www.youtube.com/embed/${btsSource}`;
+        }
+        btsBox.innerHTML = `
+            <div style="width: 100%; aspect-ratio: 16/9; margin-top: 10px;">
+                <iframe width="100%" height="100%" src="${btsEmbed}" frameborder="0" allowfullscreen style="border-radius: 6px;"></iframe>
+            </div>
+        `;
     } else {
-        btsBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Sahne arkası (BTS) içeriği bulunamadı.</p>`;
+        const btsSearch = encodeURIComponent((data.title || "Movie") + " behind the scenes");
+        btsBox.innerHTML = `
+            <div style="text-align: center; padding: 30px 10px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
+                <p style="color: #888; font-size: 13px; margin: 0;">Sahne arkası içeriği bulunamadı.</p>
+                <a href="https://www.youtube.com/results?search_query=${btsSearch}" target="_blank" 
+                   style="background: #222; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; border: 1px solid #444; display: inline-flex; align-items: center; gap: 6px;">
+                    🔍 YouTube'da Ara
+                </a>
+            </div>
+        `;
     }
 }
 
