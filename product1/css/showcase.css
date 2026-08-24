@@ -401,3 +401,128 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   FİLM DETAY MODAL (POPUP) STİLLERİ
+   ========================================== */
+.movie-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(5, 7, 11, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.movie-modal-content {
+    background: #151922;
+    border: 1px solid #2a3245;
+    width: 90%;
+    max-width: 650px;
+    border-radius: 20px;
+    padding: 30px;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    color: #ffffff;
+    animation: modalScaleIn 0.25s ease forwards;
+}
+
+@keyframes modalScaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: #222836;
+    border: none;
+    color: #9ca3af;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.modal-body-wrapper {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.modal-body-wrapper img {
+    width: 200px;
+    height: 290px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+.modal-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.modal-info h3 {
+    font-family: 'Sora', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+}
+
+.modal-meta-badges {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.modal-meta-badges span {
+    background: #1e2433;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #2e384d;
+}
+
+.modal-info p {
+    color: #9ca3af;
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.modal-actions {
+    margin-top: 10px;
+}
+
+.modal-actions .btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.modal-actions .btn-primary:hover {
+    transform: translateY(-2px);
+}

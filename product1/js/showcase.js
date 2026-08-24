@@ -270,20 +270,32 @@ function parseWeatherData(rawWeatherText) {
     };
 }
 
-// Film isimlerine göre şık ve gerçekçi poster eşleme (Eğer API'den poster gelmezse)
-// Film isimlerine göre gerçekçi ve doğru poster eşleme
+// Film veya dizi adına göre güvenli ve gerçekçi poster eşleme fonksiyonu
 function getFallbackPoster(title) {
     const t = title.toLowerCase();
+    
     if (t.includes('batman')) return 'https://image.tmdb.org/t/p/w500/covqqqcdGNWz8DV15zeCWzOXvR0.jpg';
-    if (t.includes('13 reasons')) return 'https://image.tmdb.org/t/p/w500/iJc5q5F1pU4tLqB7w6n9n4m3p0a.jpg'; // Alternatif popüler poster
-    if (t.includes('fall of the house of usher')) return 'https://image.tmdb.org/t/p/w500/yQxWw8E454VlQ874t32s1nK2A81.jpg';
+    if (t.includes('13 reasons')) return 'https://image.tmdb.org/t/p/w500/iJc5q5F1pU4tLqB7w6n9n4m3p0a.jpg';
+    if (t.includes('house of the dragon')) return 'https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg';
+    if (t.includes('dead poets society')) return 'https://image.tmdb.org/t/p/w500/aiunwpcKNwrmr6W5cmuw7vG415K.jpg';
+    if (t.includes('dark wolf') || t.includes('terminal list')) return 'https://image.tmdb.org/t/p/w500/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg';
     if (t.includes('harry potter')) return 'https://image.tmdb.org/t/p/w500/wuMc08IPKEatf9rnMNXvIDxqP4W.jpg';
-    if (t.includes('dark')) return 'https://image.tmdb.org/t/p/w500/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg';
     if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg';
     if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
     
-    // Eğer doğrudan dizi/film ismi varsa TMDB arama posterlerinden güvenli bir havuz kullanalım
-    return `https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=500&auto=format&fit=crop`;
+    const genericPosters = [
+        'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg',
+        'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
+        'https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg',
+        'https://image.tmdb.org/t/p/w500/gKkl37BQuKTanygYQG1pyYgLVgf.jpg'
+    ];
+    
+    let hash = 0;
+    for (let i = 0; i < t.length; i++) {
+        hash = t.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % genericPosters.length;
+    return genericPosters[index];
 }
 
 // Detay Modalını Sayfaya Otomatik Ekleyen Fonksiyon
@@ -327,51 +339,6 @@ function closeMovieDetails() {
     const modal = document.getElementById('movieDetailModal');
     if (modal) modal.classList.add('hidden');
 }
-
-// Kart oluşturma döngüsü içerisindeki güncellenmiş kısım:
-movieTitles.forEach((movie, index) => {
-    const card = document.createElement('div');
-    card.className = 'movie-card';
-    
-    const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
-    const posterUrl = getFallbackPoster(title);
-    const rating = movie.rating || '8.4';
-    const genre = movie.genre || 'Fantastik / Macera';
-    const duration = movie.durationInMinutes || movie.duration || '135';
-
-    // Karta tıklandığında artık hata sayfasına gitmek yerine modal açılacak
-    card.addEventListener('click', () => {
-        openMovieDetails(title, rating, genre, duration, posterUrl);
-    });
-
-    card.innerHTML = `
-        <div class="movie-poster-container">
-            <img src="${posterUrl}" alt="${title}" onerror="this.src='https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=500&auto=format&fit=crop'" />
-        </div>
-        <div class="movie-card-content">
-            <div>
-                <div class="movie-header">
-                    <span class="movie-number">#${index + 1} Öneri</span>
-                    <span class="movie-rating">⭐ ${rating}</span>
-                </div>
-                <div class="movie-title" title="${title}">${title}</div>
-                <div class="movie-meta">
-                    <span>🎭 ${genre}</span>
-                    <span>⏱️ ${duration} dk</span>
-                </div>
-            </div>
-            
-            <div class="movie-tag-wrapper">
-                <span class="movie-tag">🎯 AI Analiz Özeti</span>
-                <ul class="tooltip-list">
-                    <li>👤 <strong>Kullanıcı:</strong> ${selectedUserName} geçmişine uygun.</li>
-                    <li>🌤️ <strong>Ortam:</strong> ${city} (${weatherInfo.text}, ${weatherInfo.temp}) için ideal.</li>
-                </ul>
-            </div>
-        </div>
-    `;
-    movieGrid.appendChild(card);
-});
 
 async function generateShowcase() {
     const cityInput = document.getElementById('cityInput');
@@ -445,8 +412,9 @@ async function generateShowcase() {
                     
                     const title = typeof movie === 'string' ? movie : (movie.title || movie.name || 'İsimsiz İçerik');
                     
-                    const posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath)) 
-                        ? (movie.poster || movie.posterUrl || movie.backdropPath) 
+                    // Backend'den gelen poster verisini kontrol et, yoksa ada göre güvenli fallback kullan
+                    const posterUrl = (typeof movie === 'object' && (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl)) 
+                        ? (movie.poster || movie.posterUrl || movie.backdropPath || movie.imageUrl) 
                         : getFallbackPoster(title);
 
                     const rating = movie.rating || '8.4';
@@ -454,9 +422,9 @@ async function generateShowcase() {
                     const duration = movie.durationInMinutes || movie.duration || '135';
                     const movieId = movie.id || index + 1;
 
-                    // Karta tıklandığında detay sayfasına yönlendirme
+                    // Karta tıklandığında modalı aç
                     card.addEventListener('click', () => {
-                        window.location.href = `movie-detail.html?id=${movieId}&title=${encodeURIComponent(title)}`;
+                        openMovieDetails(title, rating, genre, duration, posterUrl);
                     });
 
                     card.innerHTML = `
