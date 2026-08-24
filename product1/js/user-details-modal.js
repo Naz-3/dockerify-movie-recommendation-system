@@ -151,23 +151,84 @@ function setupUserModalTabs(data) {
         seasonsBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>`;
     }
 
-// B) FRAGMANLAR TABI
+// B) FRAGMANLAR TABI (Akıllı Arama: Ana obje + Sezonlar + Bölümler)
     const trailerBox = document.getElementById("userTabTrailer");
-    const trailerSource = data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl;
+    let allTrailers = [];
 
-    if (trailerSource && trailerSource !== "null" && trailerSource !== "undefined") {
-        let embedUrl = trailerSource;
-        if (!trailerSource.includes("http") && !trailerSource.includes("/")) {
-            embedUrl = `https://www.youtube.com/embed/${trailerSource}`;
-        } else if (trailerSource.includes("watch?v=")) {
-            embedUrl = trailerSource.replace("watch?v=", "embed/");
-        } else if (trailerSource.includes("youtu.be/")) {
-            embedUrl = trailerSource.replace("youtu.be/", "youtube.com/embed/");
+    // 1. Ana objede dizi/liste şeklinde fragman var mı?
+    if (data.trailers && Array.isArray(data.trailers)) {
+        allTrailers = data.trailers;
+    } else if (data.videos && Array.isArray(data.videos)) {
+        allTrailers = data.videos;
+    } 
+    // 2. Ana objede tekil fragman var mı?
+    else if (data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl) {
+        allTrailers.push({
+            title: (data.title || "İçerik") + " Fragman",
+            videoUrl: data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl
+        });
+    }
+
+    // 3. Sezonlar veya Bölümler içerisinden fragmanları topla
+    const seasonsArr = data.seasons || data.seasonList || [];
+    const episodesArr = data.episodes || data.episodeList || [];
+
+    seasonsArr.forEach(season => {
+        if (season.trailerUrl || season.trailer || season.videoUrl || season.trailerKey) {
+            allTrailers.push({
+                title: season.name || "Sezon Fragmanı",
+                videoUrl: season.trailerUrl || season.trailer || season.videoUrl || season.trailerKey
+            });
         }
+        if (season.episodes && Array.isArray(season.episodes)) {
+            season.episodes.forEach(ep => {
+                if (ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey) {
+                    allTrailers.push({
+                        title: `${ep.episodeNumber || ''}. Bölüm Fragmanı`,
+                        videoUrl: ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey,
+                        thumbnailUrl: ep.stillPath || ep.image
+                    });
+                }
+            });
+        }
+    });
 
+    episodesArr.forEach(ep => {
+        if (ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey) {
+            allTrailers.push({
+                title: `${ep.seasonNumber || 1}. Sezon ${ep.episodeNumber || 1}. Bölüm`,
+                videoUrl: ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey,
+                thumbnailUrl: ep.stillPath || ep.image
+            });
+        }
+    });
+
+    // Benzersiz hale getirelim (aynı URL eklenmesin)
+    allTrailers = Array.from(new Set(allTrailers.map(t => t.videoUrl)))
+        .map(url => allTrailers.find(t => t.videoUrl === url));
+
+    if (allTrailers.length > 0) {
         trailerBox.innerHTML = `
-            <div style="width: 100%; aspect-ratio: 16/9; margin-top: 10px;">
-                <iframe width="100%" height="100%" src="${embedUrl}" frameborder="0" allowfullscreen style="border-radius: 6px;"></iframe>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 10px;">
+                ${allTrailers.map(tr => {
+                    let vUrl = tr.videoUrl || tr.url;
+                    if (!vUrl.includes("http") && !vUrl.includes("/")) {
+                        vUrl = `https://www.youtube.com/embed/${vUrl}`;
+                    }
+                    const thumb = tr.thumbnailUrl || data.poster || 'https://placehold.co/220x120/222/fff?text=Trailer';
+                    
+                    return `
+                        <div onclick="openUserVideoModal('${vUrl}', '${tr.title || 'Fragman'}')" style="background: #151922; border: 1px solid #1e232d; border-radius: 8px; overflow: hidden; cursor: pointer;">
+                            <div style="position: relative; height: 120px; background: #0b0d12;">
+                                <img src="${thumb}" style="width: 100%; height: 100%; object-fit: cover;" />
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: rgba(229, 9, 20, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;">▶</div>
+                            </div>
+                            <div style="padding: 10px;">
+                                <p style="color: #fff; font-size: 12px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${tr.title || 'Fragman'}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     } else {
@@ -176,7 +237,7 @@ function setupUserModalTabs(data) {
             <div style="text-align: center; padding: 30px 10px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
                 <p style="color: #888; font-size: 13px; margin: 0;">Bu içerik için sisteme kayıtlı bir fragman bulunmuyor.</p>
                 <a href="https://www.youtube.com/results?search_query=${searchTitle}" target="_blank" 
-                   style="background: #e50914; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(229,9,20,0.3);">
+                   style="background: #e50914; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
                     ▶ YouTube'da Fragman Ara
                 </a>
             </div>
