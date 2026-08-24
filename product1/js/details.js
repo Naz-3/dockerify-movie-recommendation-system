@@ -12,22 +12,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (token.startsWith("Bearer ")) token = token.substring(7);
 
     try {
-        const url = `https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}/details`;
-        console.log("İstek atılan URL:", url);
+        const headers = {
+            "Authorization": token ? `Bearer ${token}` : "",
+            "Content-Type": "application/json"
+        };
 
-        const response = await fetch(url, {
-            headers: {
-                "Authorization": token ? `Bearer ${token}` : "",
-                "Content-Type": "application/json"
-            }
-        });
+        // 1. Ana içerik detayını çek
+        const detailsUrl = `https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}/details`;
+        const detailsResponse = await fetch(detailsUrl, { headers });
+        if (!detailsResponse.ok) throw new Error("Detay verisi çekilemedi: " + detailsResponse.status);
+        const data = await detailsResponse.json();
 
-        console.log("Response Status:", response.status);
+        // 2. Bölümleri ayrı olan endpoint'ten çek (/api/episodes/content/{contentId})
+        const episodesUrl = `https://dockerify-movie-recommendation-system.onrender.com/api/episodes/content/${contentId}`;
+        const episodesResponse = await fetch(episodesUrl, { headers });
+        if (episodesResponse.ok) {
+            const episodesData = await episodesResponse.json();
+            // Gelen bölümleri data objesine ekleyelim ki render fonksiyonu kullanabilsin
+            data.episodes = episodesData;
+        }
 
-        if (!response.ok) throw new Error("Veri çekilemedi: " + response.status);
-
-        const data = await response.json();
-        console.log("Backend'den gelen veri:", data);
+        console.log("Birleştirilmiş Veri:", data);
         
         renderAdminDetailsPage(data);
         ensureVideoModalExists();
