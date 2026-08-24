@@ -34,7 +34,7 @@ body {
     font-weight: 700;
     margin-bottom: 24px;
     text-align: center;
-    background: linear-gradient(135deg, #e50914, #ff4757);
+    background: linear-gradient(135deg, #91aeff92, #648af292);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -65,8 +65,8 @@ body {
 }
 
 .form-group input:focus, .form-input:focus {
-    border-color: #e50914;
-    box-shadow: 0 0 12px rgba(229, 9, 20, 0.3);
+    border-color: #648af292;
+    box-shadow: 0 0 12px rgba(180, 134, 254, 0.4);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -74,7 +74,7 @@ body {
 .submit-btn, .login-btn, button[type="submit"] {
     width: 100%;
     padding: 12px;
-    background: linear-gradient(135deg, #e50914, #b80710);
+    background: linear-gradient(135deg, #91aeff92, #648af292);
     color: #ffffff;
     border: none;
     border-radius: 8px;
@@ -92,7 +92,7 @@ body {
 .submit-btn:hover, .login-btn:hover, button[type="submit"]:hover {
     opacity: 0.95;
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(229, 9, 20, 0.4);
+    box-shadow: 0 6px 20px rgba(180, 134, 254, 0.4);
 }
 
 .submit-btn:disabled, button[type="submit"]:disabled {
@@ -122,7 +122,7 @@ p, .register-link {
 }
 
 p a, .register-link a {
-    color: #e50914;
+    color: #648af292;
     text-decoration: none;
     font-weight: 600;
 }
@@ -154,13 +154,13 @@ p a:hover, .register-link a:hover {
     display: flex;
     align-items: center;
     gap: 12px;
-    border-left: 4px solid #e50914;
+    border-left: 4px solid #648af292;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     animation: slideIn 0.3s ease forwards;
 }
 
-.toast.success { border-left-color: #10b981; }
-.toast.error { border-left-color: #ef4444; }
+.toast.success { border-left-color: #10b9818c; }
+.toast.error { border-left-color: #f2646492; }
 .toast.warning { border-left-color: #f59e0b; }
 
 @keyframes slideIn {
