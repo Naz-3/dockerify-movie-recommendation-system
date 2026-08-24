@@ -66,8 +66,9 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MovieDetailDto> getAllDetails() {
-        return repository.findAll().stream()
+        return repository.findAllWithActors().stream()
                 .map(this::mapToMovieDetailDto)
                 .collect(Collectors.toList());
     }
@@ -88,6 +89,7 @@ public class ContentServiceImpl implements ContentService {
         String actors = "";
         if (content.getActors() != null && !content.getActors().isEmpty()) {
             actors = content.getActors().stream()
+                    .filter(actor -> actor != null && actor.getName() != null)
                     .map(Actor::getName)
                     .collect(Collectors.joining(", "));
         }

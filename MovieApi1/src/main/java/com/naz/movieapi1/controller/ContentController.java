@@ -7,6 +7,8 @@ import com.naz.movieapi1.dto.video.VideoDto;
 import com.naz.movieapi1.entity.Content;
 import com.naz.movieapi1.service.ActorService;
 import com.naz.movieapi1.service.ContentService;
+import com.naz.movieapi1.service.impl.ContentServiceImpl;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +21,14 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class ContentController {
 
+    private final ContentServiceImpl contentServiceImpl;
     private final ContentService service;
     private final ActorService actorService;
 
-    public ContentController(ContentService service, ActorService actorService) {
+    public ContentController(ContentService service, ActorService actorService, ContentServiceImpl contentServiceImpl) {
         this.service = service;
         this.actorService = actorService;
+        this.contentServiceImpl = contentServiceImpl;
     }
 
     @GetMapping
