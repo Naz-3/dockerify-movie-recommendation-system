@@ -41,6 +41,34 @@
         <div id="searchResultsGrid" class="media-grid"></div>
     </main>
 
+        <!-- Kullanıcı Detay Modalı -->
+    <div id="contentDetailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; overflow-y: auto;">
+        <div style="background: #11141a; border: 1px solid #1e232d; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; color: #fff; padding: 20px; position: relative;">
+            <button onclick="closeContentDetailModal()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">✕</button>
+        
+            <!-- Modal Kapak Resmi -->
+            <img id="modalBanner" src="" alt="Kapak" style="width: 100%; height: 300px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;">
+        
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 id="modalTitle" style="margin: 0; font-size: 22px;"></h2>
+                <span id="modalTypeBadge" style="background: #e50914; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;"></span>
+            </div>
+        
+            <p id="modalOverview" style="color: #8a99ad; font-size: 14px; line-height: 1.5; margin-bottom: 20px;"></p>
+
+            <!-- İzleme İlerlemesi -->
+            <div style="margin-bottom: 20px; background: #151922; padding: 12px; border-radius: 8px;">
+                <div id="modalProgressText" style="font-size: 13px; margin-bottom: 6px; color: #c5d1e0;"></div>
+                <div style="background: #2a3447; height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div id="modalProgressBar" style="background: #e50914; width: 0%; height: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Sekmelerin ve İçeriklerin Yükleneceği Alan -->
+            <div id="modalTabBody"></div>
+        </div>
+    </div>
+    
     <script src="js/auth-guard.js"></script>
     <script src="js/user-panel.js"></script>
     <script src="js/user-details-modal.js"></script>
