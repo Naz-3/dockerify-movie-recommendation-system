@@ -344,3 +344,72 @@ function setAdminText(elementId, value) {
         el.innerText = (value && String(value).trim() !== "" && String(value).trim() !== "null") ? value : "-";
     }
 }
+
+// --- YENİ MEDYA EKLEME MODAL FONKSİYONLARI ---
+let currentSelectedSeasonNumber = 1;
+
+window.openAddMediaModal = function(seasonNumber) {
+    currentSelectedSeasonNumber = seasonNumber || 1;
+    const modal = document.getElementById("addMediaModal");
+    if (modal) {
+        modal.classList.remove("hidden");
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+    }
+};
+
+window.closeAddMediaModal = function() {
+    const modal = document.getElementById("addMediaModal");
+    if (modal) {
+        modal.classList.add("hidden");
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+};
+
+window.saveNewMedia = async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const contentId = urlParams.get("id");
+
+    const titleInput = document.getElementById("mediaTitleInput") || document.querySelector("#addMediaModal input[type='text']");
+    const typeSelect = document.getElementById("mediaTypeSelect") || document.querySelector("#addMediaModal select");
+    const urlInput = document.getElementById("mediaUrlInput") || document.querySelector("#addMediaModal input[type='url'], #addMediaModal input[placeholder*='youtube']");
+
+    const title = titleInput ? titleInput.value.trim() : "";
+    const mediaType = typeSelect ? typeSelect.value : "Trailer";
+    const videoUrl = urlInput ? urlInput.value.trim() : "";
+
+    if (!title || !videoUrl) {
+        alert("Lütfen başlık ve video bağlantısını eksiksiz doldurun.");
+        return;
+    }
+
+    let token = localStorage.getItem("jwtToken") || localStorage.getItem("token") || "";
+    if (token.startsWith("Bearer ")) token = token.substring(7);
+
+    try {
+        const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}/videos`, {
+            method: "POST",
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : "",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                title: title,
+                type: mediaType,
+                videoUrl: videoUrl,
+                seasonNumber: currentSelectedSeasonNumber
+            })
+        });
+
+        if (!response.ok) throw new Error("Medya kaydedilemedi: " + response.status);
+
+        alert("Medya başarıyla eklendi!");
+        closeAddMediaModal();
+        window.location.reload();
+
+    } catch (error) {
+        console.error("Medya kaydetme hatası:", error);
+        alert("Medya eklenirken bir hata oluştu.");
+    }
+};
