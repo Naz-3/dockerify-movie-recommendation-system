@@ -1,11 +1,4 @@
-const POSSIBLE_ENDPOINTS = [
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/suggest',
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases/suggest',
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/generate',
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases/generate',
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/recommend',
-    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases/recommend'
-];
+const BASE_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases';
 const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
 let currentShowcaseId = null;
 
@@ -180,46 +173,32 @@ async function addCurrentMovieToWatchlist() {
     const userId = getActiveUserId();
     const token = localStorage.getItem("jwtToken");
     
-    const endpoints = [
-        `https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users/${userId}/watchlist`,
-        `https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/users/${userId}/watchlist`,
-        `https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/watchlist`
-    ];
+    try {
+        let response = await fetch(`https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users/${userId}/watchlist`, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
+            },
+            body: JSON.stringify({
+                title: activeModalMovie.title,
+                genre: activeModalMovie.genre,
+                rating: activeModalMovie.rating,
+                duration: activeModalMovie.duration,
+                posterUrl: activeModalMovie.posterUrl,
+                userId: userId
+            })
+        });
 
-    let success = false;
-
-    for (const endpoint of endpoints) {
-        try {
-            let response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": token ? `Bearer ${token}` : ""
-                },
-                body: JSON.stringify({
-                    title: activeModalMovie.title,
-                    genre: activeModalMovie.genre,
-                    rating: activeModalMovie.rating,
-                    duration: activeModalMovie.duration,
-                    posterUrl: activeModalMovie.posterUrl,
-                    userId: userId
-                })
-            });
-
-            if (response.ok) {
-                success = true;
-                break;
-            }
-        } catch (err) {
-            console.warn("Watchlist hata:", err);
+        if (response.ok) {
+            alert(`🎉 "${activeModalMovie.title}" başarıyla listenize eklendi!`);
+            closeMovieDetails();
+        } else {
+            alert(`"${activeModalMovie.title}" listenize eklenirken bir hata oluştu.`);
         }
-    }
-
-    if (success) {
-        alert(`🎉 "${activeModalMovie.title}" başarıyla listenize eklendi!`);
-        closeMovieDetails();
-    } else {
-        alert(`"${activeModalMovie.title}" listenize eklenirken bir hata oluştu.`);
+    } catch (err) {
+        console.warn("Watchlist hata:", err);
+        alert("Sunucuya bağlanılamadı.");
     }
 }
 
@@ -240,39 +219,23 @@ async function generateShowcase() {
     if (loading) loading.classList.remove('hidden');
     if (previewCard) previewCard.classList.add('hidden');
 
-    let response = null;
-    let data = null;
-
-    for (const endpointUrl of POSSIBLE_ENDPOINTS) {
-        try {
-            const targetUrl = `${endpointUrl}?city=${encodeURIComponent(city)}&userId=${userId}`;
-            const res = await fetch(targetUrl, {
-                method: 'GET',
-                headers: getAuthHeaders()
-            });
-
-            if (res.status === 401 || res.status === 403) {
-                logout();
-                return;
-            }
-
-            if (res.ok) {
-                response = res;
-                data = await res.json();
-                break;
-            }
-        } catch (e) {
-            console.warn("Endpoint denenirken hata:", endpointUrl);
-        }
-    }
-
-    if (!response || !data) {
-        if (loading) loading.classList.add('hidden');
-        alert('Vitrin oluşturulamadı: Backend projenizdeki ShowcaseController içinde bu isteği karşılayan doğru URL mapping yolunu (endpoint) bulamadık. Lütfen Java tarafındaki @RequestMapping veya @GetMapping yolunu kontrol edin.');
-        return;
-    }
-
     try {
+        const targetUrl = `${BASE_URL}/suggest?city=${encodeURIComponent(city)}&userId=${userId}`;
+        const res = await fetch(targetUrl, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(`Sunucu hatası: ${res.status} - ${res.statusText}`);
+        }
+
+        const data = await res.json();
         currentShowcaseId = data.showcaseId;
 
         const rawTrigger = data.triggerReason || '';
@@ -363,7 +326,7 @@ async function generateShowcase() {
 
     } catch (error) {
         console.error("Showcase parsing error:", error);
-        alert(`Vitrin işlenirken bir hata meydana geldi: ${error.message}`);
+        alert(`Vitrin oluşturulurken bir hata meydana geldi: ${error.message}`);
     } finally {
         if (loading) loading.classList.add('hidden');
     }
@@ -376,7 +339,7 @@ async function approveShowcase() {
     }
 
     try {
-        const response = await fetch(`https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/${currentShowcaseId}/approve`, {
+        const response = await fetch(`${BASE_URL}/${currentShowcaseId}/approve`, {
             method: 'POST',
             headers: getAuthHeaders()
         });
