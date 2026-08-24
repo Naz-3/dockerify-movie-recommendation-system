@@ -23,7 +23,7 @@ const defaultCities = [
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
-    //mobil menu
+    // Mobil menü
     const menuToggle = document.getElementById("menuToggle");
     const sidebar = document.querySelector(".sidebar");
 
@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
             sidebar.classList.toggle("mobile-open");
         });
     }
+    
     // Sayfa dışı tıklamada mobil sidebar'ı kapat
     document.addEventListener("click", (e) => {
         if (sidebar && sidebar.classList.contains("mobile-open")) {
@@ -41,16 +42,43 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    // 1. LocalStorage'dan giriş yapan kullanıcının adını al
-    const activeUser = localStorage.getItem("username") || localStorage.getItem("activeUsername") || localStorage.getItem("user") || "Bilinmeyen Kullanıcı";
+    // 1. Kullanıcı adını localStorage'daki olası tüm anahtarlardan arayalım
+    let activeUser = localStorage.getItem("username") || 
+                     localStorage.getItem("activeUsername") || 
+                     localStorage.getItem("user") || 
+                     localStorage.getItem("name");
 
-    // 2. Ekrandaki etikete doğrudan kullanıcı adını yazdır
+    // 2. Eğer hiçbir yerde kayıtlı değilse ama JWT Token varsa, token'ı okumayı deneyelim
+    if (!activeUser) {
+        const token = localStorage.getItem("jwtToken");
+        if (token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                const payload = JSON.parse(jsonPayload);
+                activeUser = payload.sub || payload.username || payload.name || payload.email || "Admin";
+                
+                localStorage.setItem("username", activeUser);
+            } catch (e) {
+                console.error("Token çözülemedi:", e);
+                activeUser = "Admin";
+            }
+        } else {
+            activeUser = "Admin";
+        }
+    }
+
+    // 3. Ekrandaki etikete kullanıcı adını doğrudan yazdıralım
     const userDisplay = document.getElementById("activeUsernameDisplay");
     if (userDisplay) {
         userDisplay.textContent = activeUser;
     }
 
-    // 3. AI Vitrin İsteği Atılırken generateShowcase fonksiyonunu çağır
+    // 4. AI Vitrin İsteği Atılırken generateShowcase fonksiyonunu çağır
     const generateBtn = document.getElementById("generateBtn");
     if (generateBtn) {
         generateBtn.addEventListener("click", () => {
@@ -58,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Şehir Datalist'ini Doldur (Varsa)
+    // Şehir Datalist'ini Doldur
     populateCityList();
 });
 
@@ -71,7 +99,7 @@ function getAuthHeaders() {
     };
 }
 
-// Oturum Koruma (Auth Guard) - Token yoksa login sayfasına yönlendirir
+// Oturum Koruma (Auth Guard)
 function checkAuthGuard() {
     const token = localStorage.getItem("jwtToken");
     if (!token) {
@@ -99,11 +127,11 @@ function checkAuthStatus() {
 
 // Oturumu kapatıp login sayfasına yönlendiren fonksiyon
 function logout() {
-    localStorage.clear(); // Tüm oturum verilerini (jwtToken, username, userRole vb.) temizler
+    localStorage.clear();
     window.location.href = "login.html";
 }
 
-// Veritabanındaki kullanıcıları dropdown'a yükleyen fonksiyon (Korumalı API)
+// Veritabanındaki kullanıcıları dropdown'a yükleyen fonksiyon
 async function loadUsersDropdown() {
     const userSelect = document.getElementById('userSelect');
     
@@ -124,7 +152,7 @@ async function loadUsersDropdown() {
         const users = await response.json();
 
         if (userSelect) {
-            userSelect.innerHTML = ''; // "Kullanıcılar yükleniyor..." seçeneğini temizle
+            userSelect.innerHTML = '';
 
             if (!Array.isArray(users) || users.length === 0) {
                 userSelect.innerHTML = '<option value="">Kullanıcı Bulunamadı</option>';
@@ -140,9 +168,8 @@ async function loadUsersDropdown() {
                 const city = user.city ? ` (${user.city})` : '';
 
                 option.textContent = `${name}${city}`;
-                option.dataset.city = user.city || ''; // Şehir bilgisini option üzerinde saklıyoruz
+                option.dataset.city = user.city || '';
 
-                // Eğer hafızadaki kullanıcı id ile eşleşirse seçili getir
                 if (activeUserId && user.id == activeUserId) {
                     option.selected = true;
                 }
@@ -150,7 +177,6 @@ async function loadUsersDropdown() {
                 userSelect.appendChild(option);
             });
 
-            // Seçili kullanıcının şehir bilgisini doldur
             const selectedOpt = userSelect.options[userSelect.selectedIndex];
             if (selectedOpt && selectedOpt.dataset.city) {
                 const cityInput = document.getElementById('cityInput');
@@ -178,7 +204,6 @@ function onUserChange(e) {
         localStorage.setItem('activeUserId', userId);
         localStorage.setItem('username', userName);
 
-        // Sol üstteki aktif kullanıcı adını anında güncelle
         const userDisplay = document.getElementById("activeUsernameDisplay");
         if (userDisplay) {
             userDisplay.textContent = userName;
@@ -189,11 +214,10 @@ function onUserChange(e) {
             if (cityInput) cityInput.value = userCity;
         }
 
-        checkAuthStatus(); // Oturum alanını güncelle
+        checkAuthStatus();
     }
 }
 
-// LocalStorage'dan aktif kullanıcı ID'sini alan yardımcı fonksiyon
 function getActiveUserId() {
     const userSelect = document.getElementById('userSelect');
     if (userSelect && userSelect.value) {
@@ -202,7 +226,6 @@ function getActiveUserId() {
     return localStorage.getItem('activeUserId') || '1';
 }
 
-// LocalStorage veya Select elementinden kullanıcı adını alan yardımcı fonksiyon
 function getActiveUserName() {
     const userSelect = document.getElementById('userSelect');
     if (userSelect && userSelect.selectedIndex !== -1 && userSelect.options[userSelect.selectedIndex]) {
@@ -211,7 +234,6 @@ function getActiveUserName() {
     return localStorage.getItem('username') || localStorage.getItem('activeUsername') || 'Kullanıcı';
 }
 
-// City List Datalist İçeriğini Oluşturan Fonksiyon
 function populateCityList() {
     const datalist = document.getElementById('cityList');
     if (datalist) {
@@ -221,7 +243,6 @@ function populateCityList() {
     }
 }
 
-// Weather metninden ikon ve Türkçe karşılık türeten yardımcı fonksiyon
 function parseWeatherData(rawWeatherText) {
     if (!rawWeatherText) return { icon: '🌤️', text: 'Bilinmiyor', temp: '--', humidity: '--' };
 
@@ -249,7 +270,6 @@ function parseWeatherData(rawWeatherText) {
     };
 }
 
-// Vitrin Önerisi Oluşturma (Korumalı API)
 async function generateShowcase() {
     const cityInput = document.getElementById('cityInput');
     const city = cityInput ? cityInput.value.trim() : '';
@@ -271,7 +291,7 @@ async function generateShowcase() {
     try {
         const response = await fetch(`${BASE_URL}/suggest?city=${encodeURIComponent(city)}&userId=${userId}`, {
             method: 'GET',
-            headers: getAuthHeaders() // JWT Token header'a ekleniyor
+            headers: getAuthHeaders()
         });
         
         if (response.status === 401 || response.status === 403) {
@@ -285,8 +305,6 @@ async function generateShowcase() {
         }
 
         const data = await response.json();
-        console.log('API Response:', data);
-
         currentShowcaseId = data.showcaseId;
 
         const rawTrigger = data.triggerReason || '';
@@ -378,7 +396,6 @@ async function generateShowcase() {
     }
 }
 
-// Vitrin Onaylama (Korumalı API)
 async function approveShowcase() {
     if (!currentShowcaseId) {
         alert('Onaylanacak bir vitrin bulunamadı!');
@@ -388,7 +405,7 @@ async function approveShowcase() {
     try {
         const response = await fetch(`${BASE_URL}/${currentShowcaseId}/approve`, {
             method: 'POST',
-            headers: getAuthHeaders() // JWT Token header'a ekleniyor
+            headers: getAuthHeaders()
         });
 
         if (response.status === 401 || response.status === 403) {
