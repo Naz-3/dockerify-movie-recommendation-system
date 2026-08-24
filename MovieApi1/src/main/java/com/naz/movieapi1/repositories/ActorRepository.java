@@ -16,7 +16,7 @@ public interface ActorRepository extends JpaRepository<Actor, Long> {
         SELECT a
         FROM Actor a
         LEFT JOIN a.contents c
-        GROUP BY a
+        GROUP BY a.id, a.name
         ORDER BY COUNT(c) DESC
     """)
     List<Actor> findMostFeaturedActors(Pageable pageable);

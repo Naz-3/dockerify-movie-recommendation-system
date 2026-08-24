@@ -68,15 +68,22 @@ function renderActors() {
         return;
     }
 
-    actorsGrid.innerHTML = filtered.map(actor => `
+    actorsGrid.innerHTML = filtered.map(actor => {
+        // Backend DTO isim farklılıklarına karşı esnek okuma
+        const movieCount = actor.movieCount ?? actor.totalMovies ?? 0;
+        const seriesCount = actor.seriesCount ?? actor.totalSeries ?? 0;
+        const highestRating = actor.highestRating ?? actor.topRating ?? "-";
+        const topMovieTitle = actor.topMovie?.title || actor.topMovieTitle || actor.mostPopularMovie || "-";
+
+        return `
         <article class="actor-card">
             <div class="actor-info">
                 <h3>${escapeHtml(actor.name)}</h3>
                 <div class="actor-stats">
-                    <p>🎬 <b>${typeof t === "function" ? t("movie") : "Film"}:</b> ${actor.movieCount ?? 0}</p>
-                    <p>📺 <b>${typeof t === "function" ? t("series") : "Dizi"}:</b> ${actor.seriesCount ?? 0}</p>
-                    <p>⭐ <b>${typeof t === "function" ? t("highestImdb") : "En Yüksek IMDb"}:</b> ${actor.highestRating ?? "-"}</p>
-                    <p>🏆 <b>${typeof t === "function" ? t("mostPopular") : "En Popüler"}:</b> ${escapeHtml(actor.topMovie?.title ?? "-")}</p>
+                    <p>🎬 <b>${typeof t === "function" ? t("movie") : "Film"}:</b> ${movieCount}</p>
+                    <p>📺 <b>${typeof t === "function" ? t("series") : "Dizi"}:</b> ${seriesCount}</p>
+                    <p>⭐ <b>${typeof t === "function" ? t("highestImdb") : "En Yüksek IMDb"}:</b> ${highestRating}</p>
+                    <p>🏆 <b>${typeof t === "function" ? t("mostPopular") : "En Popüler"}:</b> ${escapeHtml(topMovieTitle)}</p>
                 </div>
                 <div class="actor-actions">
                     <button class="primary-btn" onclick="showFilmography(${actor.id})">
@@ -91,7 +98,8 @@ function renderActors() {
                 </div>
             </div>
         </article>
-    `).join("");
+        `;
+    }).join("");
 }
 
 function showFilmography(actorId) {
@@ -99,13 +107,13 @@ function showFilmography(actorId) {
     if (!actor) return;
     document.getElementById("actorFilmographyModal")?.remove();
 
-    const filmographyList = actor.filmography || [];
+    const filmographyList = actor.filmography || actor.contents || [];
     const filmography = filmographyList.map(movie => `
         <li>
             <span>${escapeHtml(movie.title)}</span>
-            <strong>⭐ ${movie.rating ?? "-"}</strong>
+            <strong>⭐ ${movie.rating ?? movie.imdbRating ?? "-"}</strong>
             <small>
-                ${escapeHtml(movie.year ?? "-")}
+                ${escapeHtml(movie.year ?? movie.releaseYear ?? "-")}
                 ·
                 ${typeof t === "function" ? t(movie.type?.toLowerCase() || "movie") : movie.type}
             </small>
@@ -237,7 +245,7 @@ function deleteActor(actorId) {
         msgElem.innerHTML = `<strong>${escapeHtml(actor.name)}</strong> oyuncusunu silmek istediğinize emin misiniz?<br><br>Bu oyuncu aşağıdaki içeriklerle ilişkilidir:`;
     }
     if (moviesElem) {
-        const filmography = actor.filmography || [];
+        const filmography = actor.filmography || actor.contents || [];
         moviesElem.innerHTML = filmography.length > 0
             ? filmography.map(movie => `<div class="delete-movie-item">🎬 ${escapeHtml(movie.title)}</div>`).join("")
             : `<div class="delete-movie-item">İlişkili içerik yok.</div>`;
