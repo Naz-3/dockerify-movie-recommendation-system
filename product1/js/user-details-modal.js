@@ -151,13 +151,12 @@ function setupUserModalTabs(data) {
         seasonsBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>`;
     }
 
-    // B) FRAGMANLAR TABI
+// B) FRAGMANLAR TABI
     const trailerBox = document.getElementById("userTabTrailer");
     const trailerSource = data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl;
 
-    if (trailerSource) {
+    if (trailerSource && trailerSource !== "null" && trailerSource !== "undefined") {
         let embedUrl = trailerSource;
-        // Eğer sadece YouTube video key geldiyse (örn: "dQw4w9WgXcQ")
         if (!trailerSource.includes("http") && !trailerSource.includes("/")) {
             embedUrl = `https://www.youtube.com/embed/${trailerSource}`;
         } else if (trailerSource.includes("watch?v=")) {
@@ -172,14 +171,13 @@ function setupUserModalTabs(data) {
             </div>
         `;
     } else {
-        // Fragman verisi yoksa kullanıcıyı YouTube'da aratması için yönlendiren şık bir arama butonu sunalım
         const searchTitle = encodeURIComponent((data.title || "Movie") + " official trailer");
         trailerBox.innerHTML = `
             <div style="text-align: center; padding: 30px 10px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
-                <p style="color: #888; font-size: 13px; margin: 0;">Bu içerik için sisteme kayıtlı bir fragman anahtarı bulunmuyor.</p>
+                <p style="color: #888; font-size: 13px; margin: 0;">Bu içerik için sisteme kayıtlı bir fragman bulunmuyor.</p>
                 <a href="https://www.youtube.com/results?search_query=${searchTitle}" target="_blank" 
-                   style="background: #e50914; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-                    ▶ YouTube'da Ara
+                   style="background: #e50914; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(229,9,20,0.3);">
+                    ▶ YouTube'da Fragman Ara
                 </a>
             </div>
         `;
@@ -189,7 +187,7 @@ function setupUserModalTabs(data) {
     const btsBox = document.getElementById("userTabBts");
     const btsSource = data.btsKey || data.btsUrl || data.behindTheScenes;
 
-    if (btsSource) {
+    if (btsSource && btsSource !== "null" && btsSource !== "undefined") {
         let btsEmbed = btsSource;
         if (!btsSource.includes("http") && !btsSource.includes("/")) {
             btsEmbed = `https://www.youtube.com/embed/${btsSource}`;
@@ -205,8 +203,8 @@ function setupUserModalTabs(data) {
             <div style="text-align: center; padding: 30px 10px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
                 <p style="color: #888; font-size: 13px; margin: 0;">Sahne arkası içeriği bulunamadı.</p>
                 <a href="https://www.youtube.com/results?search_query=${btsSearch}" target="_blank" 
-                   style="background: #222; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; border: 1px solid #444; display: inline-flex; align-items: center; gap: 6px;">
-                    🔍 YouTube'da Ara
+                   style="background: #222; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; border: 1px solid #444; display: inline-flex; align-items: center; gap: 8px;">
+                    🔍 YouTube'da Sahne Arkası Ara
                 </a>
             </div>
         `;
