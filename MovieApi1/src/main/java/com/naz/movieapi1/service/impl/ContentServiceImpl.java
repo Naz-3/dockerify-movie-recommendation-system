@@ -4,35 +4,29 @@ import com.naz.movieapi1.ContentSource;
 import com.naz.movieapi1.dto.omdb.OmdbDto;
 import com.naz.movieapi1.dto.omdb.OmdbSearchItemDto;
 import com.naz.movieapi1.dto.omdb.OmdbSearchResponseDto;
-import com.naz.movieapi1.dto.tmdb.TmdbMovieResponseDto;
-import com.naz.movieapi1.dto.tmdb.TmdbSearchResponseDto;
 import com.naz.movieapi1.dto.video.TmdbVideoResponseDto;
 import com.naz.movieapi1.dto.video.VideoDto;
 import com.naz.movieapi1.entity.Content;
+import com.naz.movieapi1.entity.Actor;
+import com.naz.movieapi1.entity.Episode;
 import com.naz.movieapi1.exception.MovieAlreadyExistsException;
 import com.naz.movieapi1.exception.MovieNotFoundException;
 import com.naz.movieapi1.repositories.ContentRepository;
+import com.naz.movieapi1.repositories.ActorRepository;
+import com.naz.movieapi1.repositories.EpisodeRepository;
 import com.naz.movieapi1.service.ContentService;
+import com.naz.movieapi1.dto.omdb.OmdbSeasonDto;
+import com.naz.movieapi1.dto.SeasonDto;
+import com.naz.movieapi1.dto.EpisodeDto;
+import com.naz.movieapi1.dto.search.SearchResultDto;
+import com.naz.movieapi1.dto.details.MovieDetailDto;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
-import com.naz.movieapi1.entity.Actor;
-import com.naz.movieapi1.repositories.ActorRepository;
-import com.naz.movieapi1.dto.omdb.OmdbSeasonDto;
-import com.naz.movieapi1.dto.SeasonDto;
-import com.naz.movieapi1.dto.EpisodeDto;
-import com.naz.movieapi1.entity.Episode;
-import com.naz.movieapi1.repositories.EpisodeRepository;
-import com.naz.movieapi1.dto.search.SearchResultDto;
-import com.naz.movieapi1.dto.details.MovieDetailDto;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,7 +87,6 @@ public class ContentServiceImpl implements ContentService {
                     .map(Actor::getName)
                     .collect(Collectors.joining(", "));
         }
-
         dto.setActors(actors);
         dto.setPlot(content.getPlot());
         dto.setLanguage(content.getLanguage());
@@ -101,7 +94,54 @@ public class ContentServiceImpl implements ContentService {
         dto.setAwards(content.getAwards());
         dto.setStatus(content.getStatus());
         dto.setSource("DATABASE");
+
+        if (content.getRuntime() != null && content.getRuntime().contains("min")) {
+            try {
+                dto.setTotalMinutes(Integer.parseInt(content.getRuntime().replace("min", "").trim()));
+            } catch (Exception ignored) {}
+        } else {
+            dto.setTotalMinutes("series".equalsIgnoreCase(content.getType()) ? 450 : 120);
+        }
+
+        if (content.getImdbId() != null) {
+            dto.setVideos(fetchVideosByImdbId(content.getImdbId()));
+        }
+
         return dto;
+    }
+
+    private List<VideoDto> fetchVideosByImdbId(String imdbId) {
+        if (tmdbApiKey == null || tmdbApiKey.isBlank() || imdbId == null) return Collections.emptyList();
+        try {
+            String findUrl = tmdbBaseUrl + "/find/" + imdbId + "?api_key=" + tmdbApiKey + "&external_source=imdb_id";
+            Map<?, ?> findResponse = restClient.get().uri(findUrl).retrieve().body(Map.class);
+
+            if (findResponse != null) {
+                List<?> movies = (List<?>) findResponse.get("movie_results");
+                List<?> tvShows = (List<?>) findResponse.get("tv_results");
+
+                Long tmdbId = null;
+                String type = "movie";
+
+                if (movies != null && !movies.isEmpty()) {
+                    tmdbId = ((Number) ((Map<?, ?>) movies.get(0)).get("id")).longValue();
+                } else if (tvShows != null && !tvShows.isEmpty()) {
+                    tmdbId = ((Number) ((Map<?, ?>) tvShows.get(0)).get("id")).longValue();
+                    type = "tv";
+                }
+
+                if (tmdbId != null) {
+                    String vidUrl = String.format("%s/%s/%d/videos?api_key=%s&language=en-US", tmdbBaseUrl, type, tmdbId, tmdbApiKey);
+                    TmdbVideoResponseDto vidRes = restClient.get().uri(vidUrl).retrieve().body(TmdbVideoResponseDto.class);
+                    if (vidRes != null && vidRes.getResults() != null) {
+                        return vidRes.getResults();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("TMDB Videolar Çekilemedi: " + e.getMessage());
+        }
+        return Collections.emptyList();
     }
 
     @Override
@@ -131,19 +171,16 @@ public class ContentServiceImpl implements ContentService {
         content.setPoster(updated.getPoster());
         content.setRating(updated.getRating());
         content.setRuntime(updated.getRuntime());
-
         content.setDirector(updated.getDirector());
         content.setWriter(updated.getWriter());
         content.setComposer(updated.getComposer());
-
         content.setCountry(updated.getCountry());
         content.setLanguage(updated.getLanguage());
         content.setAwards(updated.getAwards());
 
         String actorNames = "";
         if (updated.getActors() != null) {
-            actorNames = updated.getActors()
-                    .stream()
+            actorNames = updated.getActors().stream()
                     .map(Actor::getName)
                     .reduce((a, b) -> a + "," + b)
                     .orElse("");
@@ -159,10 +196,7 @@ public class ContentServiceImpl implements ContentService {
         if (tmdbApiKey != null && !tmdbApiKey.isBlank()) {
             try {
                 String tmdbUrl = tmdbBaseUrl + "/search/multi?api_key=" + tmdbApiKey + "&query=" + title;
-                Map<?, ?> response = restClient.get()
-                        .uri(tmdbUrl)
-                        .retrieve()
-                        .body(Map.class);
+                Map<?, ?> response = restClient.get().uri(tmdbUrl).retrieve().body(Map.class);
 
                 if (response != null && response.containsKey("results")) {
                     List<?> results = (List<?>) response.get("results");
@@ -174,7 +208,6 @@ public class ContentServiceImpl implements ContentService {
 
                         if ("movie".equalsIgnoreCase(mediaType) || "tv".equalsIgnoreCase(mediaType)) {
                             OmdbSearchItemDto item = new OmdbSearchItemDto();
-
                             String name = "movie".equals(mediaType) ? (String) itemMap.get("title") : (String) itemMap.get("name");
                             item.setTitle(name);
 
@@ -184,7 +217,6 @@ public class ContentServiceImpl implements ContentService {
 
                             String posterPath = (String) itemMap.get("poster_path");
                             item.setPoster(posterPath != null ? tmdbImageBaseUrl + posterPath : null);
-
                             item.setType("movie".equals(mediaType) ? "movie" : "series");
 
                             Long tmdbId = ((Number) itemMap.get("id")).longValue();
@@ -194,28 +226,18 @@ public class ContentServiceImpl implements ContentService {
                             searchItems.add(item);
                         }
                     }
-                    if (!searchItems.isEmpty()) {
-                        return searchItems;
-                    }
+                    if (!searchItems.isEmpty()) return searchItems;
                 }
             } catch (Exception e) {
-                System.err.println("TMDB arama hatası, OMDb fallback kullanılıyor: " + e.getMessage());
+                System.err.println("TMDB arama hatası: " + e.getMessage());
             }
         }
 
         try {
             String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&s=" + title;
-            OmdbSearchResponseDto response = restClient.get()
-                    .uri(url)
-                    .retrieve()
-                    .body(OmdbSearchResponseDto.class);
-
-            if (response == null || response.getSearch() == null) {
-                return Collections.emptyList();
-            }
-            return response.getSearch();
+            OmdbSearchResponseDto response = restClient.get().uri(url).retrieve().body(OmdbSearchResponseDto.class);
+            return (response == null || response.getSearch() == null) ? Collections.emptyList() : response.getSearch();
         } catch (Exception e) {
-            System.err.println("OMDb arama hatası: " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -224,12 +246,8 @@ public class ContentServiceImpl implements ContentService {
     public OmdbDto getMovieByImdbId(String imdbId) {
         try {
             String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
-            return restClient.get()
-                    .uri(url)
-                    .retrieve()
-                    .body(OmdbDto.class);
+            return restClient.get().uri(url).retrieve().body(OmdbDto.class);
         } catch (Exception e) {
-            System.err.println("OMDb isteği başarısız oldu (API Limiti/Ağ Hatası): " + e.getMessage());
             return null;
         }
     }
@@ -261,11 +279,12 @@ public class ContentServiceImpl implements ContentService {
             content.setPoster(tmdbDetails.getPoster());
             content.setRating(tmdbDetails.getRating());
             content.setPlot(tmdbDetails.getPlot());
+            content.setActors(convertActors(tmdbDetails.getActors()));
             content.setSource(ContentSource.OMDB);
         } else {
             OmdbDto movie = getMovieByImdbId(identifier);
             if (movie == null || movie.getTitle() == null) {
-                throw new MovieNotFoundException("Film detayları OMDb/TMDB'den alınamadı: " + identifier);
+                throw new MovieNotFoundException("Film detayları alınamadı: " + identifier);
             }
 
             content.setTitle(movie.getTitle());
@@ -273,12 +292,8 @@ public class ContentServiceImpl implements ContentService {
 
             if (movie.getYear() != null && !movie.getYear().equals("N/A")) {
                 String year = movie.getYear().replace("–", "-").trim();
-                if (year.contains("-")) {
-                    year = year.split("-")[0].trim();
-                }
-                try {
-                    content.setYear(Integer.parseInt(year));
-                } catch (NumberFormatException ignored) {}
+                if (year.contains("-")) year = year.split("-")[0].trim();
+                try { content.setYear(Integer.parseInt(year)); } catch (NumberFormatException ignored) {}
             }
             content.setGenre(movie.getGenre());
             content.setType(movie.getType());
@@ -293,9 +308,7 @@ public class ContentServiceImpl implements ContentService {
             content.setPlot(movie.getPlot());
 
             if (movie.getImdbRating() != null && !movie.getImdbRating().equals("N/A")) {
-                try {
-                    content.setRating(Double.parseDouble(movie.getImdbRating().trim()));
-                } catch (NumberFormatException ignored) {}
+                try { content.setRating(Double.parseDouble(movie.getImdbRating().trim())); } catch (NumberFormatException ignored) {}
             }
         }
 
@@ -304,29 +317,23 @@ public class ContentServiceImpl implements ContentService {
         try {
             saveEpisodes(savedContent);
         } catch (Exception e) {
-            System.err.println("Bölüm bilgileri kaydedilirken hata oluştu: " + e.getMessage());
+            System.err.println("Bölüm bilgileri kaydedilirken hata: " + e.getMessage());
         }
         return savedContent;
     }
 
     @Override
     public Content importTmdbMovie(String tmdbId) {
-        if (tmdbId == null || tmdbId.isBlank()) {
-            throw new MovieNotFoundException("TMDb ID boş olamaz.");
-        }
+        if (tmdbId == null || tmdbId.isBlank()) throw new MovieNotFoundException("TMDb ID boş olamaz.");
 
         try {
             Long numericTmdbId = Long.parseLong(tmdbId.trim());
             String imdbId = getImdbIdFromTmdb(numericTmdbId, "movie");
-            if (imdbId != null && !imdbId.isBlank()) {
-                return importMovie(imdbId);
-            }
+            if (imdbId != null && !imdbId.isBlank()) return importMovie(imdbId);
         } catch (NumberFormatException ignored) {}
 
         String fallbackImdbId = "tmdb-" + tmdbId.trim();
-        if (repository.existsByImdbId(fallbackImdbId)) {
-            throw new MovieAlreadyExistsException("Bu içerik zaten kayıtlı.");
-        }
+        if (repository.existsByImdbId(fallbackImdbId)) throw new MovieAlreadyExistsException("Bu içerik zaten kayıtlı.");
 
         Content content = new Content();
         content.setImdbId(fallbackImdbId);
@@ -338,92 +345,56 @@ public class ContentServiceImpl implements ContentService {
             if (response != null && response.containsKey("title")) {
                 content.setTitle((String) response.get("title"));
                 content.setPlot((String) response.get("overview"));
-
                 String posterPath = (String) response.get("poster_path");
-                if (posterPath != null) {
-                    content.setPoster(tmdbImageBaseUrl + posterPath);
-                }
+                if (posterPath != null) content.setPoster(tmdbImageBaseUrl + posterPath);
 
                 String releaseDate = (String) response.get("release_date");
                 if (releaseDate != null && releaseDate.contains("-")) {
                     content.setYear(Integer.parseInt(releaseDate.split("-")[0].trim()));
                 }
-
                 Object voteAvg = response.get("vote_average");
-                if (voteAvg != null) {
-                    content.setRating(Double.parseDouble(voteAvg.toString().trim()));
-                }
+                if (voteAvg != null) content.setRating(Double.parseDouble(voteAvg.toString().trim()));
 
                 content.setType("movie");
                 content.setSource(ContentSource.OMDB);
                 content.setStatus("İzlenecek");
-
                 return repository.save(content);
             }
         } catch (Exception e) {
-            throw new MovieNotFoundException("TMDb'den film çekilemedi: " + e.getMessage());
+            throw new MovieNotFoundException("TMDb'den çekilemedi: " + e.getMessage());
         }
-
         throw new MovieNotFoundException("Film bulunamadı.");
     }
 
     @Override
     @Transactional
     public List<Content> importBulkMovies(List<String> imdbIds) {
-        if (imdbIds == null || imdbIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
+        if (imdbIds == null || imdbIds.isEmpty()) return Collections.emptyList();
         List<Content> contentsToSave = new ArrayList<>();
-
         for (String imdbId : imdbIds) {
-            if (imdbId == null || imdbId.isBlank()) {
-                continue;
-            }
+            if (imdbId == null || imdbId.isBlank()) continue;
             try {
-                if (repository.existsByImdbId(imdbId)) {
-                    System.out.println("Zaten kayıtlı, atlanıyor: " + imdbId);
-                    continue;
+                if (!repository.existsByImdbId(imdbId)) {
+                    Content imported = importMovie(imdbId.trim());
+                    if (imported != null) contentsToSave.add(imported);
                 }
-                Content imported = importMovie(imdbId.trim());
-                if (imported != null) {
-                    contentsToSave.add(imported);
-                }
-            } catch (MovieAlreadyExistsException e) {
-                System.out.println("Zaten var olan film atlandı: " + imdbId);
-            } catch (Exception e) {
-                System.err.println("Toplu Aktarım Hatası (" + imdbId + "): " + e.getMessage());
-            }
+            } catch (Exception ignored) {}
         }
-
         return contentsToSave;
     }
 
     @Override
     @Transactional
     public List<Content> importBulkTmdbMovies(List<String> tmdbIds) {
-        if (tmdbIds == null || tmdbIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
+        if (tmdbIds == null || tmdbIds.isEmpty()) return Collections.emptyList();
         List<Content> contentsToSave = new ArrayList<>();
-
         for (String tmdbId : tmdbIds) {
-            if (tmdbId == null || tmdbId.isBlank()) {
-                continue;
-            }
+            if (tmdbId == null || tmdbId.isBlank()) continue;
             try {
                 Content imported = importTmdbMovie(tmdbId.trim());
-                if (imported != null) {
-                    contentsToSave.add(imported);
-                }
-            } catch (MovieAlreadyExistsException e) {
-                System.out.println("Zaten var olan TMDb film atlandı: " + tmdbId);
-            } catch (Exception e) {
-                System.err.println("TMDb Bulk Import Hatası (" + tmdbId + "): " + e.getMessage());
-            }
+                if (imported != null) contentsToSave.add(imported);
+            } catch (Exception ignored) {}
         }
-
         return contentsToSave;
     }
 
@@ -442,17 +413,13 @@ public class ContentServiceImpl implements ContentService {
         }
         OmdbDto movie = getMovieByImdbId(content.getImdbId());
         if (movie == null || movie.getTitle() == null) {
-            throw new MovieNotFoundException("OMDb verisi alınamadı (API kotası dolmuş veya geçersiz ID olabilir).");
+            throw new MovieNotFoundException("OMDb verisi alınamadı.");
         }
         content.setTitle(movie.getTitle());
         if (movie.getYear() != null && !movie.getYear().equals("N/A")) {
             String year = movie.getYear().replace("–", "-").trim();
-            if (year.contains("-")) {
-                year = year.split("-")[0].trim();
-            }
-            try {
-                content.setYear(Integer.parseInt(year));
-            } catch (NumberFormatException ignored) {}
+            if (year.contains("-")) year = year.split("-")[0].trim();
+            try { content.setYear(Integer.parseInt(year)); } catch (NumberFormatException ignored) {}
         }
         content.setGenre(movie.getGenre());
         content.setType(movie.getType());
@@ -463,13 +430,10 @@ public class ContentServiceImpl implements ContentService {
         content.setCountry(movie.getCountry());
         content.setLanguage(movie.getLanguage());
         content.setAwards(movie.getAwards());
-
         content.setActors(convertActors(movie.getActors()));
         content.setPlot(movie.getPlot());
         if (movie.getImdbRating() != null && !movie.getImdbRating().equals("N/A")) {
-            try {
-                content.setRating(Double.parseDouble(movie.getImdbRating().trim()));
-            } catch (NumberFormatException ignored) {}
+            try { content.setRating(Double.parseDouble(movie.getImdbRating().trim())); } catch (NumberFormatException ignored) {}
         }
         return repository.save(content);
     }
@@ -478,53 +442,38 @@ public class ContentServiceImpl implements ContentService {
     public void syncAllContents() {
         List<Content> contents = repository.findAll();
         for (Content content : contents) {
-            try {
-                syncMovie(content.getId());
-            } catch (Exception e) {
-                System.err.println("Senkronizasyon hatası ID (" + content.getId() + "): " + e.getMessage());
-            }
+            try { syncMovie(content.getId()); } catch (Exception ignored) {}
         }
     }
 
     private List<Actor> convertActors(String actorsText) {
         List<Actor> actors = new ArrayList<>();
-        if (actorsText == null || actorsText.isBlank() || actorsText.equals("N/A")) {
-            return actors;
-        }
+        if (actorsText == null || actorsText.isBlank() || actorsText.equals("N/A")) return actors;
         for (String actorName : actorsText.split(",")) {
             final String name = actorName.trim();
             if (name.isBlank()) continue;
-            Actor actor = actorRepository
-                    .findByName(name)
-                    .orElseGet(() -> actorRepository.save(new Actor(name)));
+            Actor actor = actorRepository.findByName(name).orElseGet(() -> actorRepository.save(new Actor(name)));
             actors.add(actor);
         }
         return actors;
     }
 
     private void saveEpisodes(Content content) {
-        if (!"series".equalsIgnoreCase(content.getType())) {
-            return;
-        }
+        if (!"series".equalsIgnoreCase(content.getType())) return;
+
         OmdbDto series = getMovieByImdbId(content.getImdbId());
-        if (series == null || series.getTotalSeasons() == null || series.getTotalSeasons().equals("N/A")) {
-            return;
-        }
+        if (series == null || series.getTotalSeasons() == null || series.getTotalSeasons().equals("N/A")) return;
+
         int totalSeasons = Integer.parseInt(series.getTotalSeasons().trim());
         for (int season = 1; season <= totalSeasons; season++) {
             try {
                 String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + content.getImdbId() + "&Season=" + season;
-                OmdbSeasonDto omdbSeason = restClient.get()
-                        .uri(seasonUrl)
-                        .retrieve()
-                        .body(OmdbSeasonDto.class);
-                if (omdbSeason == null || omdbSeason.getEpisodes() == null) {
-                    continue;
-                }
+                OmdbSeasonDto omdbSeason = restClient.get().uri(seasonUrl).retrieve().body(OmdbSeasonDto.class);
+                if (omdbSeason == null || omdbSeason.getEpisodes() == null) continue;
+
                 for (EpisodeDto dto : omdbSeason.getEpisodes()) {
-                    if (episodeRepository.existsByImdbId(dto.getImdbId())) {
-                        continue;
-                    }
+                    if (episodeRepository.existsByImdbId(dto.getImdbId())) continue;
+
                     Episode detail = new Episode();
                     EpisodeDto episodeDetail = getEpisodeDetails(dto.getImdbId());
 
@@ -534,19 +483,15 @@ public class ContentServiceImpl implements ContentService {
                         detail.setPlot(episodeDetail.getPlot());
                         detail.setPoster(episodeDetail.getPoster());
                         detail.setRuntime(episodeDetail.getRuntime());
-                        try {
-                            detail.setRating(Double.parseDouble(episodeDetail.getImdbRating().trim()));
-                        } catch (Exception ignored) {}
+                        try { detail.setRating(Double.parseDouble(episodeDetail.getImdbRating().trim())); } catch (Exception ignored) {}
                         detail.setSeasonNumber(season);
-                        try {
-                            detail.setEpisodeNumber(Integer.parseInt(dto.getEpisode().trim()));
-                        } catch (Exception ignored) {}
+                        try { detail.setEpisodeNumber(Integer.parseInt(dto.getEpisode().trim())); } catch (Exception ignored) {}
                         detail.setContent(content);
                         episodeRepository.save(detail);
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Sezon " + season + " çekilirken hata oluştu: " + e.getMessage());
+                System.err.println("Sezon " + season + " eklenirken hata: " + e.getMessage());
             }
         }
     }
@@ -573,7 +518,6 @@ public class ContentServiceImpl implements ContentService {
             }
             return seasons;
         } catch (Exception e) {
-            System.err.println("Sezon listesi alınamadı: " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -583,7 +527,6 @@ public class ContentServiceImpl implements ContentService {
             String url = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId;
             return restClient.get().uri(url).retrieve().body(EpisodeDto.class);
         } catch (Exception e) {
-            System.err.println("Bölüm detayı alınamadı: " + e.getMessage());
             return null;
         }
     }
@@ -593,15 +536,12 @@ public class ContentServiceImpl implements ContentService {
         try {
             String seasonUrl = "https://www.omdbapi.com/?apikey=" + apiKey + "&i=" + imdbId + "&Season=" + season;
             OmdbSeasonDto omdbSeason = restClient.get().uri(seasonUrl).retrieve().body(OmdbSeasonDto.class);
-
             if (omdbSeason == null || omdbSeason.getEpisodes() == null) return new SeasonDto();
 
             List<EpisodeDto> detailedEpisodes = new ArrayList<>();
             for (EpisodeDto episode : omdbSeason.getEpisodes()) {
                 EpisodeDto detail = getEpisodeDetails(episode.getImdbId());
-                if (detail != null) {
-                    detailedEpisodes.add(detail);
-                }
+                if (detail != null) detailedEpisodes.add(detail);
             }
             SeasonDto dto = new SeasonDto();
             dto.setTitle(omdbSeason.getTitle());
@@ -610,7 +550,6 @@ public class ContentServiceImpl implements ContentService {
             dto.setEpisodes(detailedEpisodes);
             return dto;
         } catch (Exception e) {
-            System.err.println("Sezon detayları alınamadı: " + e.getMessage());
             return new SeasonDto();
         }
     }
@@ -620,7 +559,6 @@ public class ContentServiceImpl implements ContentService {
         if (imdbId == null || imdbId.isBlank() || season == null || tmdbApiKey == null || tmdbApiKey.isBlank()) {
             return Collections.emptyList();
         }
-
         try {
             String findUrl = tmdbBaseUrl + "/find/" + imdbId + "?api_key=" + tmdbApiKey + "&external_source=imdb_id";
             Map<?, ?> findResponse = restClient.get().uri(findUrl).retrieve().body(Map.class);
@@ -641,7 +579,7 @@ public class ContentServiceImpl implements ContentService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("TMDB Sezon Videoları Çekilemedi (" + imdbId + " S" + season + "): " + e.getMessage());
+            System.err.println("Sezon videoları çekilemedi: " + e.getMessage());
         }
         return Collections.emptyList();
     }
@@ -668,16 +606,12 @@ public class ContentServiceImpl implements ContentService {
             dto.setType(content.getType());
             dto.setSource("DATABASE");
             results.add(dto);
-            if (content.getImdbId() != null) {
-                imdbIds.add(content.getImdbId());
-            }
+            if (content.getImdbId() != null) imdbIds.add(content.getImdbId());
         }
 
         List<OmdbSearchItemDto> apiResults = searchMovies(title);
         for (OmdbSearchItemDto movie : apiResults) {
-            if (movie.getImdbId() != null && imdbIds.contains(movie.getImdbId())) {
-                continue;
-            }
+            if (movie.getImdbId() != null && imdbIds.contains(movie.getImdbId())) continue;
             SearchResultDto dto = new SearchResultDto();
             dto.setTitle(movie.getTitle());
             dto.setYear(movie.getYear());
@@ -699,14 +633,10 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public MovieDetailDto getOmdbDetails(String imdbId) {
         MovieDetailDto tmdbDto = getTmdbDetailsByImdbId(imdbId);
-        if (tmdbDto != null) {
-            return tmdbDto;
-        }
+        if (tmdbDto != null) return tmdbDto;
 
         OmdbDto movie = getMovieByImdbId(imdbId);
-        if (movie == null) {
-            return null;
-        }
+        if (movie == null) return null;
 
         MovieDetailDto dto = new MovieDetailDto();
         dto.setImdbId(movie.getImdbId());
@@ -719,7 +649,6 @@ public class ContentServiceImpl implements ContentService {
         } catch (Exception ignored) {}
 
         dto.setType(movie.getType());
-
         try {
             if (movie.getImdbRating() != null && !movie.getImdbRating().equals("N/A")) {
                 dto.setRating(Double.parseDouble(movie.getImdbRating().trim()));
@@ -727,6 +656,7 @@ public class ContentServiceImpl implements ContentService {
         } catch (Exception ignored) {}
 
         dto.setPoster(movie.getPoster());
+        dto.getGenre();
         dto.setGenre(movie.getGenre());
         dto.setRuntime(movie.getRuntime());
         dto.setDirector(movie.getDirector());
@@ -736,16 +666,13 @@ public class ContentServiceImpl implements ContentService {
         dto.setCountry(movie.getCountry());
         dto.setAwards(movie.getAwards());
         dto.setSource("OMDB");
-
         return dto;
     }
 
     @Override
     public MovieDetailDto fetchFromTmdb(String title) {
         List<OmdbSearchItemDto> results = searchMovies(title);
-        if (!results.isEmpty()) {
-            return getOmdbDetails(results.get(0).getImdbId());
-        }
+        if (!results.isEmpty()) return getOmdbDetails(results.get(0).getImdbId());
         return null;
     }
 
@@ -763,9 +690,7 @@ public class ContentServiceImpl implements ContentService {
     }
 
     private MovieDetailDto getTmdbDetailsByImdbId(String imdbId) {
-        if (tmdbApiKey == null || tmdbApiKey.isBlank() || imdbId == null || !imdbId.startsWith("tt")) {
-            return null;
-        }
+        if (tmdbApiKey == null || tmdbApiKey.isBlank() || imdbId == null) return null;
         try {
             String url = tmdbBaseUrl + "/find/" + imdbId + "?api_key=" + tmdbApiKey + "&external_source=imdb_id";
             Map<?, ?> response = restClient.get().uri(url).retrieve().body(Map.class);
@@ -792,30 +717,44 @@ public class ContentServiceImpl implements ContentService {
                     dto.setPlot((String) item.get("overview"));
 
                     String posterPath = (String) item.get("poster_path");
-                    if (posterPath != null) {
-                        dto.setPoster(tmdbImageBaseUrl + posterPath);
-                    }
+                    if (posterPath != null) dto.setPoster(tmdbImageBaseUrl + posterPath);
 
                     Object voteAvg = item.get("vote_average");
-                    if (voteAvg != null) {
-                        dto.setRating(Double.parseDouble(voteAvg.toString().trim()));
-                    }
+                    if (voteAvg != null) dto.setRating(Double.parseDouble(voteAvg.toString().trim()));
 
                     String date = (String) item.get("movie".equals(type) ? "release_date" : "first_air_date");
                     if (date != null && date.contains("-")) {
-                        try {
-                            dto.setYear(Integer.parseInt(date.split("-")[0].trim()));
-                        } catch (Exception ignored) {}
+                        try { dto.setYear(Integer.parseInt(date.split("-")[0].trim())); } catch (Exception ignored) {}
                     }
 
                     dto.setType(type);
+                    Long tmdbId = ((Number) item.get("id")).longValue();
+                    
+                    fetchActorsFromTmdb(dto, tmdbId, "series".equals(type) ? "tv" : "movie");
+                    dto.setVideos(fetchVideosByImdbId(imdbId));
+
                     dto.setSource("EXTERNAL_API");
                     return dto;
                 }
             }
         } catch (Exception e) {
-            System.err.println("TMDB detay getirme hatası: " + e.getMessage());
+            System.err.println("TMDB detay hatası: " + e.getMessage());
         }
         return null;
+    }
+
+    private void fetchActorsFromTmdb(MovieDetailDto dto, Long tmdbId, String type) {
+        try {
+            String creditsUrl = String.format("%s/%s/%d/credits?api_key=%s", tmdbBaseUrl, type, tmdbId, tmdbApiKey);
+            Map<?, ?> creditsResponse = restClient.get().uri(creditsUrl).retrieve().body(Map.class);
+            if (creditsResponse != null && creditsResponse.containsKey("cast")) {
+                List<?> cast = (List<?>) creditsResponse.get("cast");
+                String actors = cast.stream()
+                        .limit(5)
+                        .map(c -> (String) ((Map<?, ?>) c).get("name"))
+                        .collect(Collectors.joining(", "));
+                dto.setActors(actors);
+            }
+        } catch (Exception ignored) {}
     }
 }

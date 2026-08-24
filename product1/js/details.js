@@ -1,374 +1,186 @@
-const API = "https://dockerify-movie-recommendation-system.onrender.com/api/content";
-const EPISODE_API = "https://dockerify-movie-recommendation-system.onrender.com/api/episodes";
-const WATCH_HISTORY_API = "https://dockerify-movie-recommendation-system.onrender.com/api/user-activity/track";
-const USER_ACTIVITY_API = "https://dockerify-movie-recommendation-system.onrender.com/api/user-activity";
+document.addEventListener("DOMContentLoaded", async () => {
+    // 1. URL'den id parametresini al (Örn: content-details.html?id=30)
+    const urlParams = new URLSearchParams(window.location.search);
+    const contentId = urlParams.get("id");
 
-let editingEpisodeId = null;
-let openedSeason = null;
-let allEpisodes = [];
-let currentSeasonVideos = {};
-let activeSeasonForAddMedia = null;
-
-let currentWatchedMinutes = 0;
-let totalMovieRuntimeMinutes = 0;
-
-const params = new URLSearchParams(window.location.search);
-const id = params.get("id");
-
-const poster = document.getElementById("poster");
-const title = document.getElementById("title");
-const year = document.getElementById("year");
-const rating = document.getElementById("rating");
-const genre = document.getElementById("genre");
-const runtime = document.getElementById("runtime");
-const director = document.getElementById("director");
-const writer = document.getElementById("writer");
-const actors = document.getElementById("actors");
-const country = document.getElementById("country");
-const language = document.getElementById("language");
-const awards = document.getElementById("awards");
-const plot = document.getElementById("plot");
-const seasonList = document.getElementById("seasonList");
-
-const modal = document.getElementById("episodeModal");
-const modalPoster = document.getElementById("modalPoster");
-const modalPlot = document.getElementById("modalPlot");
-const modalPosterPreview = document.getElementById("modalPosterPreview");
-
-function getAuthHeaders() {
-    const token = localStorage.getItem("jwtToken");
-    return {
-        "Content-Type": "application/json",
-        "Authorization": token ? `Bearer ${token}` : ""
-    };
-}
-
-function checkAuthGuard() {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) {
-        window.location.href = "login.html";
-        return false;
+    if (!contentId) {
+        console.error("URL üzerinde 'id' parametresi bulunamadı.");
+        alert("Geçersiz içerik ID'si!");
+        return;
     }
-    return true;
-}
 
-function isAdminUser() {
-    const role = localStorage.getItem("userRole") || localStorage.getItem("role");
-    return role === "ADMIN" || role === "ROLE_ADMIN" || localStorage.getItem("isAdmin") === "true";
-}
+    // Token Hazırlığı
+    let token = localStorage.getItem("jwtToken") || localStorage.getItem("token") || "";
+    if (token.startsWith("Bearer ")) {
+        token = token.substring(7);
+    }
 
-function handleUnauthorized() {
-    alert("Oturum süreniz doldu veya bu işlem için yetkiniz yok.");
-    localStorage.clear();
-    window.location.href = "login.html";
-}
-
-function parseRuntimeToMinutes(runtimeStr) {
-    if (!runtimeStr || runtimeStr === "N/A") return 0;
-    const minutes = parseInt(runtimeStr);
-    return isNaN(minutes) ? 0 : minutes;
-}
-
-async function loadMovie() {
     try {
-        const response = await fetch(`${API}/${id}`, {
-            method: "GET",
-            headers: getAuthHeaders()
+        // 2. API Endpoint'ine İstek At
+        const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : "",
+                "Content-Type": "application/json"
+            }
         });
-
-        if (response.status === 401 || response.status === 403) {
-            handleUnauthorized();
-            return;
-        }
 
         if (!response.ok) {
-            if (typeof showMessage === "function") {
-                await showMessage("error", "İçerik Bulunamadı", "İstenen içerik bulunamadı.");
-            }
-            return;
+            throw new Error("İçerik verisi çekilemedi. Status: " + response.status);
         }
 
-        const movie = await response.json();
-        totalMovieRuntimeMinutes = parseRuntimeToMinutes(movie.runtime);
-        
-        fillDetails(movie);
+        const data = await response.json();
+        console.log("Backend'den Dönen İçerik Verisi:", data);
 
-        if (movie.type === "series") {
-            allEpisodes = movie.episodes ?? [];
-            await renderEpisodes();
-        }
+        // Sayfa Alanlarını Doldur
+        renderAdminContentDetails(data);
 
     } catch (error) {
-        console.error("Movie yükleme hatası:", error);
+        console.error("Detay Yükleme Hatası:", error);
     }
-}
+});
 
-function fillDetails(movie) {
-    const posterSrc = movie.poster || movie.Poster || movie.posterUrl;
-    if (poster) {
-        poster.src = (posterSrc && posterSrc !== "N/A") ? posterSrc : "https://placehold.co/300x450?text=Poster";
+function renderAdminContentDetails(data) {
+    if (!data) return;
+
+    // --- 1. GÖRSEL VE BAŞLIK ---
+    const posterImg = document.getElementById("detailPoster") || document.querySelector(".content-poster img") || document.querySelector("img");
+    if (posterImg) {
+        posterImg.src = data.poster || data.posterUrl || data.bannerUrl || data.backdropPath || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
     }
 
-    if (title) title.textContent = movie.title ?? "-";
-    if (year) year.textContent = movie.year ?? "-";
-    if (rating) rating.textContent = movie.rating ?? "-";
-    if (genre) genre.textContent = movie.genre ?? "-";
-    if (runtime) runtime.textContent = movie.runtime ?? "-";
-    if (director) director.textContent = movie.director && movie.director !== "N/A" ? movie.director : "-";
-    if (writer) writer.textContent = movie.writer && movie.writer !== "N/A" ? movie.writer : "-";
-    if (country) country.textContent = movie.country && movie.country !== "N/A" ? movie.country : "-";
-    if (language) language.textContent = movie.language && movie.language !== "N/A" ? movie.language : "-";
-    if (awards) awards.textContent = movie.awards && movie.awards !== "N/A" ? movie.awards : "-";
-    if (plot) plot.textContent = movie.plot ?? "-";
+    setElementText(["detailTitle", "contentTitle"], data.title || data.name);
+    setElementText(["detailYear", "contentYear"], data.releaseYear || data.year || (data.firstAirDate ? data.firstAirDate.substring(0, 4) : null));
+    setElementText(["detailImdb", "contentImdb"], data.imdbRating || data.voteAverage || data.rating || data.imdbScore);
 
-    if (actors) {
-        if (Array.isArray(movie.actors)) {
-            actors.textContent = movie.actors.map(actor => actor.name).join(", ");
-        } else {
-            actors.textContent = movie.actors ?? "-";
+    // --- 2. DETAY TABLOSU / DETAY ALANLARI (Tire Görünen Yerler) ---
+    
+    // Tür (Genre)
+    const genreVal = Array.isArray(data.genres) ? data.genres.map(g => g.name || g).join(", ") : (data.genre || data.category || data.type);
+    setElementText(["detailGenre", "contentGenre"], genreVal);
+
+    // Süre (Duration)
+    const durationVal = data.durationMinutes || data.duration || data.runtime || data.totalMinutes;
+    setElementText(["detailDuration", "contentDuration"], durationVal ? `${durationVal} dk` : null);
+
+    // Yönetmen (Director)
+    setElementText(["detailDirector", "contentDirector"], data.director || data.directors);
+
+    // Yazar (Writer)
+    setElementText(["detailWriter", "contentWriter"], data.writer || data.writers || data.creator || data.createdBy);
+
+    // Oyuncular (Cast / Actors)
+    const castVal = Array.isArray(data.cast) ? data.cast.map(c => c.name || c).join(", ") : (data.cast || data.actors || data.starring);
+    setElementText(["detailCast", "contentCast"], castVal);
+
+    // Ülke (Country)
+    const countryVal = Array.isArray(data.country) ? data.country.join(", ") : (data.country || data.productionCountries);
+    setElementText(["detailCountry", "contentCountry"], countryVal);
+
+    // Dil (Language)
+    const langVal = Array.isArray(data.language) ? data.language.join(", ") : (data.language || data.spokenLanguages || data.originalLanguage);
+    setElementText(["detailLanguage", "contentLanguage"], langVal);
+
+    // Ödüller (Awards)
+    setElementText(["detailAwards", "contentAwards"], data.awards || data.award);
+
+    // Açıklama (Description / Plot)
+    setElementText(["detailDescription", "contentDescription"], data.description || data.overview || data.summary || data.synopsis || data.plot);
+
+
+    // --- 3. SEZONLAR VE BÖLÜMLER (Boş Kalan Alanın Doldurulması) ---
+    
+    // Ekran görüntündeki "Sezonlar" yazısının altına hedefleniyoruz
+    let seasonsContainer = document.getElementById("seasonsContainer") || document.getElementById("seasonsList");
+    
+    // Eğer ID ile kapsayıcı bulunamadıysa, "Sezonlar" başlığını taşıyan elementi bulup hemen altına container ekliyoruz
+    if (!seasonsContainer) {
+        const headings = Array.from(document.querySelectorAll("h2, h3, h4, div, span"));
+        const seasonHeader = headings.find(el => el.innerText.trim().toLowerCase() === "sezonlar");
+        
+        if (seasonHeader) {
+            let nextContainer = seasonHeader.nextElementSibling;
+            if (!nextContainer || nextContainer.tagName !== "DIV") {
+                nextContainer = document.createElement("div");
+                seasonHeader.parentNode.insertBefore(nextContainer, seasonHeader.nextSibling);
+            }
+            seasonsContainer = nextContainer;
+            seasonsContainer.id = "seasonsContainer";
         }
     }
 
-    const seasonSection = document.querySelector(".season-section");
-    if (seasonSection) {
-        seasonSection.style.display = (movie.type === "movie") ? "none" : "block";
-    }
-}
-
-async function fetchSeasonVideos(seasonNumber) {
-    if (currentSeasonVideos[seasonNumber]) {
-        return currentSeasonVideos[seasonNumber];
+    if (!seasonsContainer) {
+        console.warn("Sezonlar için uygun DOM elementi bulunamadı.");
+        return;
     }
 
-    try {
-        const response = await fetch(`${API}/${id}/season/${seasonNumber}/videos`, {
-            method: "GET",
-            headers: getAuthHeaders()
+    // Backend'den Veri Çekme Kontrolleri (Dark dışındaki Scooby-Doo gibi içerikler için)
+    let seasonsData = data.seasons || data.seasonList || [];
+    let episodesData = data.episodes || data.episodeList || [];
+
+    // Eğer seasons boş geldiyse ama tek parça episodes geldiyse seasonNumber'a göre grupla
+    if ((!seasonsData || seasonsData.length === 0) && episodesData.length > 0) {
+        const grouped = {};
+        episodesData.forEach(ep => {
+            const sNum = ep.seasonNumber || ep.season_number || ep.season || 1;
+            if (!grouped[sNum]) grouped[sNum] = [];
+            grouped[sNum].push(ep);
         });
 
-        if (response.ok) {
-            const videos = await response.json();
-            currentSeasonVideos[seasonNumber] = videos;
-            return videos;
-        }
-    } catch (error) {
-        console.error("Sezon videoları alınamadı:", error);
+        seasonsData = Object.keys(grouped).map(sNum => ({
+            name: `${sNum}. Sezon`,
+            seasonNumber: sNum,
+            episodes: grouped[sNum]
+        }));
     }
-    return [];
-}
 
-async function renderEpisodes() {
-    if (!seasonList) return;
-    seasonList.innerHTML = "";
-    
-    const grouped = {};
-    allEpisodes.forEach(ep => {
-        if (!grouped[ep.seasonNumber]) {
-            grouped[ep.seasonNumber] = [];
-        }
-        grouped[ep.seasonNumber].push(ep);
-    });
-
-    for (const seasonNumber of Object.keys(grouped)) {
-        const seasonItem = document.createElement("div");
-        seasonItem.className = "season-item";
-        
-        const isOpened = openedSeason == seasonNumber;
-        
-        const headerDiv = document.createElement("div");
-        headerDiv.className = "season-header";
-        headerDiv.innerHTML = `
-            <span>${isOpened ? "▼" : "▶"} Season ${seasonNumber}</span>
-            <span>${grouped[seasonNumber].length} Bölüm</span>
+    // Ekran Oluşturma
+    if (seasonsData && seasonsData.length > 0) {
+        seasonsContainer.innerHTML = seasonsData.map((season, idx) => `
+            <div class="season-block" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-top: 12px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="color: #e50914; font-size: 16px; font-weight: 600; margin: 0;">${season.name || `${idx + 1}. Sezon`}</h4>
+                    <span style="color: #888; font-size: 12px;">${(season.episodes ? season.episodes.length : 0)} Bölüm</span>
+                </div>
+                <div class="episodes-list" style="display: flex; flex-direction: column; gap: 8px;">
+                    ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.3); padding: 10px 14px; border-radius: 6px; font-size: 13px; color: #ccc;">
+                            <div>
+                                <strong style="color: #fff; margin-right: 8px;">S${ep.seasonNumber || season.seasonNumber || 1}E${ep.episodeNumber || ep.episode_number || ep.episodeIndex || '-'}:</strong>
+                                <span>${ep.title || ep.name || 'Bölüm'}</span>
+                            </div>
+                            <div style="color: #777; font-size: 12px;">
+                                ${ep.durationMinutes || ep.duration || ep.runtime || 45} dk
+                            </div>
+                        </div>
+                    `).join('') : '<p style="color:#666; font-size:12px; margin:0;">Bu sezonda gösterilecek bölüm bulunamadı.</p>'}
+                </div>
+            </div>
+        `).join('');
+    } else {
+        seasonsContainer.innerHTML = `
+            <div style="padding: 16px; background: rgba(255,255,255,0.02); border-radius: 6px; margin-top: 12px;">
+                <p style="color: #888; font-size: 14px; margin: 0;">Bu içerik (ID: ${data.id}) için henüz veritabanında tanımlanmış sezon veya bölüm verisi bulunmuyor.</p>
+            </div>
         `;
-        
-        headerDiv.onclick = async () => {
-            openedSeason = (openedSeason == seasonNumber) ? null : seasonNumber;
-            await renderEpisodes();
-        };
+    }
+}
 
-        seasonItem.appendChild(headerDiv);
-
-        if (isOpened) {
-            const videos = await fetchSeasonVideos(seasonNumber);
-            const videoWrapper = document.createElement("div");
-            videoWrapper.className = "season-videos-wrapper";
-            
-            let videoCardsHtml = (videos || []).slice(0, 4).map(v => `
-                <div class="video-card" onclick="openVideoModal('${v.key}', '${v.name.replace(/'/g, "\\'")}')">
-                    <div class="video-thumbnail-container">
-                        <img class="video-thumbnail" src="https://img.youtube.com/vi/${v.key}/hqdefault.jpg" alt="${v.name}">
-                        <div class="play-overlay">
-                            <div class="play-icon-circle">▶</div>
-                        </div>
-                    </div>
-                    <div class="video-card-body">
-                        <div class="video-card-title" title="${v.name}">${v.name}</div>
-                        <span class="video-card-badge">${v.type || 'Fragman'}</span>
-                    </div>
-                </div>
-            `).join("");
-
-            if (isAdminUser()) {
-                videoCardsHtml += `
-                    <div class="video-card add-media-card" onclick="openAddMediaModal(${seasonNumber})">
-                        <div class="add-media-inner">
-                            <div class="add-media-icon">+</div>
-                            <div class="add-media-text">Medya Ekle</div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            videoWrapper.innerHTML = `
-                <div class="season-videos-title">🎬 Sezon Fragmanları & Videoları</div>
-                <div class="video-grid">${videoCardsHtml}</div>
-            `;
-            seasonItem.appendChild(videoWrapper);
-
-            const episodeList = document.createElement("div");
-            episodeList.className = "episode-list";
-            grouped[seasonNumber].forEach(ep => {
-                episodeList.innerHTML += `
-                <div class="episode-item">
-                    <img src="${ep.poster && ep.poster !== "N/A" ? ep.poster : "https://placehold.co/120x170?text=Poster"}" class="episode-poster">
-                    <div class="episode-info">
-                        <h4>${ep.episodeNumber}. ${ep.title}</h4>
-                        <p>${ep.plot}</p>
-                        <div class="episode-meta">
-                            ⭐ ${ep.rating ?? "-"}
-                            ⏱ ${ep.runtime ?? "-"}
-                        </div>
-                        ${isAdminUser() ? `<button class="episode-edit-btn" onclick="openEpisodeModal(${ep.id})">Düzenle</button>` : ''}
-                    </div>
-                </div>
-                `;
-            });
-            seasonItem.appendChild(episodeList);
+// Yardımcı Fonksiyon: HTML'deki ID'leri eşleştirip text değerlerini basar
+function setElementText(elementIds, value) {
+    let target = null;
+    for (const id of elementIds) {
+        const el = document.getElementById(id);
+        if (el) {
+            target = el;
+            break;
         }
-        seasonList.appendChild(seasonItem);
     }
-}
 
-function openVideoModal(key, videoTitle) {
-    const videoModal = document.getElementById("videoModal");
-    const videoIframe = document.getElementById("videoIframe");
-    const videoModalTitle = document.getElementById("videoModalTitle");
-
-    if (videoModal && videoIframe) {
-        videoIframe.src = `https://www.youtube.com/embed/${key}?autoplay=1`;
-        if (videoModalTitle) videoModalTitle.textContent = videoTitle;
-        videoModal.classList.remove("hidden");
-    }
-}
-
-function closeVideoModal() {
-    const videoModal = document.getElementById("videoModal");
-    const videoIframe = document.getElementById("videoIframe");
-
-    if (videoModal && videoIframe) {
-        videoIframe.src = "";
-        videoModal.classList.add("hidden");
-    }
-}
-
-function openEpisodeModal(id) {
-    editingEpisodeId = id;
-    const episode = allEpisodes.find(e => e.id === id);
-    if (!episode || !modal) return;
-    
-    if (modalPoster) modalPoster.value = episode.poster ?? "";
-    if (modalPlot) modalPlot.value = episode.plot ?? "";
-    if (modalPosterPreview) modalPosterPreview.src = episode.poster ?? "https://placehold.co/250x360?text=Poster";
-
-    modal.classList.remove("hidden");
-}
-
-function closeEpisodeModal() {
-    if (modal) modal.classList.add("hidden");
-}
-
-function openAddMediaModal(seasonNumber) {
-    activeSeasonForAddMedia = seasonNumber;
-    const addModal = document.getElementById("addMediaModal");
-    if (addModal) addModal.classList.remove("hidden");
-}
-
-function closeAddMediaModal() {
-    const addModal = document.getElementById("addMediaModal");
-    if (addModal) addModal.classList.add("hidden");
-}
-
-function toggleMediaInputType(type) {
-    const linkGroup = document.getElementById("mediaLinkGroup");
-    const fileGroup = document.getElementById("mediaFileGroup");
-    if (type === 'link') {
-        if (linkGroup) linkGroup.classList.remove("hidden");
-        if (fileGroup) fileGroup.classList.add("hidden");
-    } else {
-        if (linkGroup) linkGroup.classList.add("hidden");
-        if (fileGroup) fileGroup.classList.remove("hidden");
-    }
-}
-
-async function saveNewMedia() {
-    const nameEl = document.getElementById("mediaTitleInput");
-    const typeEl = document.getElementById("mediaTypeSelect");
-    const sourceEl = document.querySelector('input[name="mediaSource"]:checked');
-
-    if (!nameEl || !typeEl || !sourceEl) return;
-
-    const name = nameEl.value.trim();
-    const type = typeEl.value;
-    const inputOption = sourceEl.value;
-
-    let mediaKey = "";
-
-    if (inputOption === 'link') {
-        const urlOrKey = document.getElementById("mediaUrlInput")?.value.trim() || "";
-        if (urlOrKey.includes("v=")) {
-            mediaKey = urlOrKey.split("v=")[1].split("&")[0];
-        } else if (urlOrKey.includes("youtu.be/")) {
-            mediaKey = urlOrKey.split("youtu.be/")[1].split("?")[0];
+    if (target) {
+        if (value !== undefined && value !== null && String(value).trim() !== "" && String(value).trim() !== "null") {
+            target.innerText = value;
         } else {
-            mediaKey = urlOrKey;
+            target.innerText = "-";
         }
-    } else {
-        const fileInput = document.getElementById("mediaFileInput");
-        if (!fileInput || fileInput.files.length === 0) {
-            alert("Lütfen bir dosya seçin!");
-            return;
-        }
-        alert("Dosya yükleme simüle edildi.");
-        return;
-    }
-
-    if (!mediaKey || !name) {
-        alert("Lütfen tüm alanları doldurun!");
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API}/${id}/season/${activeSeasonForAddMedia}/videos`, {
-            method: "POST",
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ name, key: mediaKey, type, site: "YouTube" })
-        });
-
-        if (response.ok) {
-            delete currentSeasonVideos[activeSeasonForAddMedia];
-            closeAddMediaModal();
-            await renderEpisodes();
-        } else {
-            alert("Medya eklenirken hata oluştu.");
-        }
-    } catch (e) {
-        console.error("Video ekleme hatası:", e);
     }
 }
-
-window.onload = () => {
-    if (checkAuthGuard()) {
-        loadMovie();
-    }
-};
