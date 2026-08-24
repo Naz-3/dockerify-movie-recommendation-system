@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 function renderAdminDetailsPage(data) {
     if (!data) return;
 
-    // --- 1. ÜST BİLGİ ALANLARI (ADMIN TASARIMI) ---
+    // --- 1. ÜST BİLGİLER ---
     const posterImg = document.querySelector(".content-poster img") || document.querySelector("img");
     if (posterImg && (data.poster || data.posterUrl)) {
         posterImg.src = data.poster || data.posterUrl;
@@ -58,11 +58,14 @@ function renderAdminDetailsPage(data) {
     setAdminText("detailAwards", data.awards);
     setAdminText("detailDescription", data.description || data.overview || data.synopsis);
 
-    // --- 2. SEZON VE BÖLÜM KARTLARI (EKRAN GÖRÜNTÜSÜNDEKİ TASARIM) ---
-    renderSeasonsAndEpisodes(data);
+    // --- 2. SEZONLAR, FRAGMAN KARTLARI VE AKORDEON ---
+    renderAccordionSeasonsWithTrailers(data);
+    
+    // Sayfaya Video Oynatma Modalı Elementini Enjekte Et
+    ensureVideoModalExists();
 }
 
-function renderSeasonsAndEpisodes(data) {
+function renderAccordionSeasonsWithTrailers(data) {
     let seasonsContainer = document.getElementById("seasonsContainer") || document.querySelector(".seasons-section");
 
     if (!seasonsContainer) {
@@ -76,7 +79,6 @@ function renderSeasonsAndEpisodes(data) {
     let seasonsData = data.seasons || data.seasonList || [];
     let episodesData = data.episodes || data.episodeList || [];
 
-    // Eğer seasons listesi yoksa ama episodes geldiyse grupla
     if ((!seasonsData || seasonsData.length === 0) && episodesData.length > 0) {
         const grouped = {};
         episodesData.forEach(ep => {
@@ -92,57 +94,101 @@ function renderSeasonsAndEpisodes(data) {
     }
 
     if (seasonsData && seasonsData.length > 0) {
-        seasonsContainer.innerHTML = seasonsData.map((season, idx) => `
-            <div style="background: #11141a; border: 1px solid #1e232d; border-radius: 10px; padding: 20px; margin-top: 15px; margin-bottom: 20px;">
-                <!-- Sezon Başlığı ve Toplam Bölüm Sayısı -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
-                    <div style="color: #9ab; font-size: 14px; font-weight: 600;">
-                        ▼ ${season.name || `Season ${idx + 1}`}
-                    </div>
-                    <div style="color: #6a7b95; font-size: 13px; font-weight: 500;">
-                        ${(season.episodes ? season.episodes.length : 0)} Bölüm
-                    </div>
-                </div>
+        seasonsContainer.innerHTML = seasonsData.map((season, idx) => {
+            const isFirst = idx === 0;
+            const seasonId = `season-content-${idx}`;
+            
+            // Sezona ait fragmanlar (Backend'den geliyorsa season.trailers veya genel data.trailers kullanılabilir)
+            const seasonTrailers = season.trailers || season.videos || data.trailers || [];
 
-                <!-- Bölüm Kartları Listesi -->
-                <div style="display: flex; flex-direction: column; gap: 16px;">
-                    ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => {
-                        const epTitle = ep.title || ep.name || 'Untitled Episode';
-                        const epNum = ep.episodeNumber || ep.episode_number || ep.episodeIndex || '-';
-                        const epDesc = ep.description || ep.overview || ep.summary || 'Açıklama bulunamadı.';
-                        const epRating = ep.imdbRating || ep.voteAverage || ep.rating || '7.5';
-                        const epDate = ep.airDate || ep.releaseDate || ep.formattedDate || '01 Jan 2020';
-                        const epDuration = ep.durationMinutes || ep.duration || ep.runtime || 22;
-                        const epImg = ep.stillPath || ep.image || ep.poster || data.poster || 'https://placehold.co/180x110/1e232d/ffffff?text=No+Image';
+            return `
+                <div class="season-accordion-item" style="background: #11141a; border: 1px solid #1e232d; border-radius: 8px; margin-top: 12px; overflow: hidden;">
+                    
+                    <!-- SEZON BUTONU -->
+                    <button type="button" class="season-toggle-btn" onclick="toggleSeasonAccordion('${seasonId}', this)" 
+                        style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #151922; border: none; cursor: pointer; outline: none;">
+                        <span style="color: #9ab; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <span class="arrow-icon" style="display: inline-block; transition: transform 0.2s; transform: ${isFirst ? 'rotate(0deg)' : 'rotate(-90deg)'};">▼</span> 
+                            ${season.name || `Season ${idx + 1}`}
+                        </span>
+                        <span style="color: #6a7b95; font-size: 13px; font-weight: 500;">
+                            ${(season.episodes ? season.episodes.length : 0)} Bölüm
+                        </span>
+                    </button>
 
-                        return `
-                            <div style="display: flex; gap: 16px; background: #0b0d12; border: 1px solid #191d26; border-radius: 8px; padding: 12px; align-items: flex-start;">
-                                <!-- Sol Bölüm Görseli -->
-                                <img src="${epImg}" alt="${epTitle}" style="width: 140px; height: 90px; object-fit: cover; border-radius: 6px; flex-shrink: 0;" />
-                                
-                                <!-- Sağ Detay Bilgileri -->
-                                <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1;">
-                                    <h5 style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0;">
-                                        ${epNum}. ${epTitle}
-                                    </h5>
-                                    
-                                    <p style="color: #8a99ad; font-size: 12px; line-height: 1.4; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
-                                        ${epDesc}
-                                    </p>
-
-                                    <!-- Bölüm Meta Bilgileri (Puan, Tarih, Süre) -->
-                                    <div style="display: flex; align-items: center; gap: 12px; font-size: 11px; color: #f5c518; margin-top: 4px;">
-                                        <span>⭐ ${epRating}</span>
-                                        <span style="color: #5a6b82;">📅 ${epDate}</span>
-                                        <span style="color: #5a6b82;">⏱️ ${epDuration} min</span>
-                                    </div>
-                                </div>
+                    <!-- İÇERİK ALANI (FRAGMANLAR + BÖLÜMLER) -->
+                    <div id="${seasonId}" class="season-episodes-container" style="display: ${isFirst ? 'block' : 'none'}; padding: 16px;">
+                        
+                        <!-- SEZON FRAGMANLARI & VİDEOLARI PANELİ -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="color: #c5d1e0; font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                🎬 Sezon Fragmanları & Videoları
                             </div>
-                        `;
-                    }).join('') : '<p style="color:#5a6b82; font-size:13px; margin:0;">Bu sezonda gösterilecek bölüm bulunamadı.</p>'}
+                            
+                            <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
+                                ${seasonTrailers.length > 0 ? seasonTrailers.map(tr => `
+                                    <div onclick="openVideoModal('${tr.videoUrl || tr.url}', '${tr.title || 'Sezon Videosu'}')" style="min-width: 220px; width: 220px; background: #151922; border: 1px solid #1e232d; border-radius: 6px; overflow: hidden; cursor: pointer; transition: transform 0.2s;">
+                                        <div style="position: relative; height: 120px; background: #0b0d12;">
+                                            <img src="${tr.thumbnailUrl || data.poster || 'https://placehold.co/220x120/222/fff?text=Trailer'}" style="width: 100%; height: 100%; object-fit: cover;" />
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: rgba(229, 9, 20, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;">▶</div>
+                                        </div>
+                                        <div style="padding: 8px;">
+                                            <p style="color: #fff; font-size: 11px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${tr.title || 'Trailer'}</p>
+                                            <span style="color: #6a7b95; font-size: 10px;">${tr.type || 'TRAILER'}</span>
+                                        </div>
+                                    </div>
+                                `).join('') : `
+                                    <!-- Eğer özel fragman yoksa örnek şık placeholder veya genel fragman -->
+                                    <div onclick="openVideoModal('${data.trailerUrl || 'https://www.youtube.com/embed/arr_UlwtWPE'}', '${season.name} Fragman')" style="min-width: 220px; width: 220px; background: #151922; border: 1px solid #1e232d; border-radius: 6px; overflow: hidden; cursor: pointer;">
+                                        <div style="position: relative; height: 120px; background: #0b0d12;">
+                                            <img src="${data.poster || data.posterUrl || 'https://placehold.co/220x120/222/fff?text=Trailer'}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8;" />
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: rgba(229, 9, 20, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;">▶</div>
+                                        </div>
+                                        <div style="padding: 8px;">
+                                            <p style="color: #fff; font-size: 11px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${season.name} Resmi Fragman</p>
+                                            <span style="color: #6a7b95; font-size: 10px;">TRAILER</span>
+                                        </div>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- BÖLÜMLER LİSTESİ -->
+                        <div style="display: flex; flex-direction: column; gap: 14px;">
+                            ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => {
+                                const epTitle = ep.title || ep.name || 'Untitled Episode';
+                                const epNum = ep.episodeNumber || ep.episode_number || ep.episodeIndex || '-';
+                                const epDesc = ep.description || ep.overview || ep.summary || 'Açıklama bulunamadı.';
+                                const epRating = ep.imdbRating || ep.voteAverage || ep.rating || '7.5';
+                                const epDate = ep.airDate || ep.releaseDate || ep.formattedDate || '01 Jan 2020';
+                                const epDuration = ep.durationMinutes || ep.duration || ep.runtime || 22;
+                                const epImg = ep.stillPath || ep.image || ep.poster || data.poster || 'https://placehold.co/140x90/1e232d/ffffff?text=No+Image';
+
+                                return `
+                                    <div style="display: flex; gap: 16px; background: #0b0d12; border: 1px solid #191d26; border-radius: 8px; padding: 12px; align-items: flex-start;">
+                                        <img src="${epImg}" alt="${epTitle}" style="width: 140px; height: 90px; object-fit: cover; border-radius: 6px; flex-shrink: 0;" />
+                                        <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1;">
+                                            <h5 style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0;">
+                                                ${epNum}. ${epTitle}
+                                            </h5>
+                                            <p style="color: #8a99ad; font-size: 12px; line-height: 1.4; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                                ${epDesc}
+                                            </p>
+                                            <div style="display: flex; align-items: center; gap: 12px; font-size: 11px; color: #f5c518; margin-top: 4px;">
+                                                <span>⭐ ${epRating}</span>
+                                                <span style="color: #5a6b82;">📅 ${epDate}</span>
+                                                <span style="color: #5a6b82;">⏱️ ${epDuration} min</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('') : '<p style="color:#5a6b82; font-size:13px; margin:0;">Bu sezonda gösterilecek bölüm bulunamadı.</p>'}
+                        </div>
+
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } else {
         seasonsContainer.innerHTML = `
             <div style="background: #11141a; border: 1px solid #1e232d; border-radius: 8px; padding: 20px; margin-top: 15px;">
@@ -151,6 +197,74 @@ function renderSeasonsAndEpisodes(data) {
         `;
     }
 }
+
+// Akordeon Mantığı (Tek Sezon Açık Kalır)
+window.toggleSeasonAccordion = function(targetId, btnElement) {
+    const allContainers = document.querySelectorAll('.season-episodes-container');
+    const allArrows = document.querySelectorAll('.arrow-icon');
+
+    allContainers.forEach(container => {
+        if (container.id === targetId) {
+            const isCurrentlyHidden = container.style.display === "none";
+            allContainers.forEach(c => c.style.display = "none");
+            allArrows.forEach(a => a.style.transform = "rotate(-90deg)");
+
+            if (isCurrentlyHidden) {
+                container.style.display = "block";
+                const currentArrow = btnElement.querySelector('.arrow-icon');
+                if (currentArrow) currentArrow.style.transform = "rotate(0deg)";
+            }
+        }
+    });
+};
+
+// --- VİDEO OYNATMA MODALI (POPUP) ---
+function ensureVideoModalExists() {
+    if (document.getElementById("customVideoPlayerModal")) return;
+
+    const modalHTML = `
+        <div id="customVideoPlayerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+            <div style="background:#11141a; border:1px solid #1e232d; border-radius:10px; width:90%; max-width:750px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.8);">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#151922; border-bottom:1px solid #1e232d;">
+                    <h4 id="modalVideoTitle" style="color:#fff; font-size:15px; margin:0;">Video Oynatıcı</h4>
+                    <button onclick="closeVideoModal()" style="background:none; border:none; color:#8a99ad; font-size:18px; cursor:pointer;">✕</button>
+                </div>
+                <div style="position:relative; width:100%; aspect-ratio:16/9; background:#000;">
+                    <iframe id="modalVideoIframe" src="" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+window.openVideoModal = function(url, title) {
+    const modal = document.getElementById("customVideoPlayerModal");
+    const iframe = document.getElementById("modalVideoIframe");
+    const titleEl = document.getElementById("modalVideoTitle");
+
+    if (!modal || !iframe) return;
+
+    let embedUrl = url || "";
+    if (embedUrl.includes("watch?v=")) {
+        embedUrl = embedUrl.replace("watch?v=", "embed/");
+    } else if (embedUrl.includes("youtu.be/")) {
+        embedUrl = embedUrl.replace("youtu.be/", "youtube.com/embed/");
+    }
+
+    iframe.src = embedUrl;
+    if (titleEl) titleEl.innerText = title || "Fragman";
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+};
+
+window.closeVideoModal = function() {
+    const modal = document.getElementById("customVideoPlayerModal");
+    const iframe = document.getElementById("modalVideoIframe");
+    if (modal) modal.style.display = "none";
+    if (iframe) iframe.src = "";
+    document.body.style.overflow = "auto";
+};
 
 function setAdminText(elementId, value) {
     const el = document.getElementById(elementId);
