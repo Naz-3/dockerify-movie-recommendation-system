@@ -288,6 +288,8 @@ function getFallbackPoster(title) {
     if (t.includes('dark wolf') || t.includes('terminal list')) return 'https://image.tmdb.org/t/p/w500/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg';
     if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg';
     if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
+    if (t.includes('spider-man') || t.includes('no way home')) return 'https://image.tmdb.org/t/p/w500/uJQdGWDHYMrWOBQvDkHDAFgUxCU.jpg';
+    if (t.includes('super mario')) return 'https://image.tmdb.org/t/p/w500/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg';
     
     // Listede olmayan diğer tüm filmler için geniş havuzdan kararlı seçim
     const genericPosters = [
@@ -322,7 +324,7 @@ function ensureDetailModalExists() {
                         <div id="modalMeta" class="modal-meta-badges"></div>
                         <p id="modalDescription">AI analizi ve içerik detayları burada yer almaktadır...</p>
                         <div class="modal-actions">
-                            <button class="btn-primary" onclick="alert('İçerik listenize eklendi!')">🎬 Listeme Ekle</button>
+                            <button id="modalAddToListBtn" class="btn-primary" onclick="addCurrentMovieToWatchlist()">🎬 Listeme Ekle</button>
                         </div>
                     </div>
                 </div>
@@ -332,9 +334,15 @@ function ensureDetailModalExists() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
+// Aktif Modal Verilerini Saklamak İçin Global Değişken
+let activeModalMovie = null;
+
 // Detay Penceresini Açma
 function openMovieDetails(title, rating, genre, duration, posterUrl) {
     ensureDetailModalExists();
+    
+    activeModalMovie = { title, rating, genre, duration, posterUrl };
+
     document.getElementById('modalTitle').innerText = title;
     document.getElementById('modalPoster').src = posterUrl;
     document.getElementById('modalMeta').innerHTML = `<span>⭐ ${rating}</span> <span>🎭 ${genre}</span> <span>⏱️ ${duration} dk</span>`;
@@ -347,6 +355,58 @@ function openMovieDetails(title, rating, genre, duration, posterUrl) {
 function closeMovieDetails() {
     const modal = document.getElementById('movieDetailModal');
     if (modal) modal.classList.add('hidden');
+}
+
+// "Daha Sonra İzle" (Watchlist) Listesine Ekleme Fonksiyonu
+async function addCurrentMovieToWatchlist() {
+    if (!activeModalMovie) {
+        alert("Eklenecek içerik bulunamadı!");
+        return;
+    }
+
+    const userId = getActiveUserId();
+    const watchlistEndpoint = `https://dockerify-movie-recommendation-system.onrender.com/api/users/${userId}/watchlist`;
+
+    try {
+        const response = await fetch(watchlistEndpoint, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                title: activeModalMovie.title,
+                genre: activeModalMovie.genre,
+                rating: activeModalMovie.rating,
+                duration: activeModalMovie.duration,
+                posterUrl: activeModalMovie.posterUrl
+            })
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            alert("Oturum süreniz doldu veya yetkiniz yok. Lütfen tekrar giriş yapın.");
+            logout();
+            return;
+        }
+
+        if (response.ok) {
+            alert(`🎉 "${activeModalMovie.title}" başarıyla 'Daha Sonra İzle' listenize eklendi!`);
+            closeMovieDetails();
+        } else {
+            // Alternatif olarak backend sadece film adı veya ID bekliyor olabilir
+            const altResponse = await fetch(`${watchlistEndpoint}?title=${encodeURIComponent(activeModalMovie.title)}`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+            
+            if (altResponse.ok) {
+                alert(`🎉 "${activeModalMovie.title}" başarıyla listenize eklendi!`);
+                closeMovieDetails();
+            } else {
+                throw new Error("İstek başarısız oldu.");
+            }
+        }
+    } catch (error) {
+        console.error("Watchlist ekleme hatası:", error);
+        alert(`"${activeModalMovie.title}" listenize eklenirken bir sorun oluştu.`);
+    }
 }
 
 async function generateShowcase() {
@@ -429,9 +489,8 @@ async function generateShowcase() {
                     const rating = movie.rating || '8.4';
                     const genre = movie.genre || 'Fantastik / Macera';
                     const duration = movie.durationInMinutes || movie.duration || '135';
-                    const movieId = movie.id || index + 1;
 
-                    // Karta tıklandığında detay modalını aç
+                    // Karta tıklandığında detay modalını aç ve parametreleri eksiksiz aktar
                     card.addEventListener('click', () => {
                         openMovieDetails(title, rating, genre, duration, posterUrl);
                     });
