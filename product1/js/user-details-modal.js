@@ -18,17 +18,32 @@ async function openContentDetailModal(contentId) {
     if (token.startsWith("Bearer ")) token = token.substring(7);
 
     try {
-        const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}`, {
-            headers: {
-                "Authorization": token ? `Bearer ${token}` : "",
-                "Content-Type": "application/json"
-            }
-        });
+        const headers = {
+            "Authorization": token ? `Bearer ${token}` : "",
+            "Content-Type": "application/json"
+        };
 
+        // 1. Ana İçerik Detayını Çek
+        const response = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/content/${contentId}`, { headers });
         if (!response.ok) throw new Error("İçerik çekilemedi: " + response.status);
 
         const data = await response.json();
-        console.log("Backend'den Gelen İçerik Verisi:", data);
+
+        // 2. Bölümleri Ayrı Endpoint'ten Çek ve 'data.episodes' İçine Ekle (Açıklamalar Dahil)
+        try {
+            const episodesResponse = await fetch(`https://dockerify-movie-recommendation-system.onrender.com/api/episodes/content/${contentId}`, { headers });
+            if (episodesResponse.ok) {
+                const episodesData = await episodesResponse.json();
+                data.episodes = episodesData;
+            } else {
+                data.episodes = [];
+            }
+        } catch (epError) {
+            console.warn("Kullanıcı modalı bölüm çekme hatası:", epError);
+            data.episodes = [];
+        }
+
+        console.log("Backend'den Gelen Birleştirilmiş İçerik Verisi:", data);
         renderUserModalContent(data);
         ensureUserVideoModalExists();
 
@@ -98,7 +113,7 @@ function setupUserModalTabs(data) {
             if (!grouped[sNum]) grouped[sNum] = [];
             grouped[sNum].push(ep);
         });
-        seasonsData = Object.keys(grouped).map(sNum => ({
+        seasonsData = Object.keys(grouped).sort((a, b) => a - b).map(sNum => ({
             name: `${sNum}. Sezon`,
             seasonNumber: sNum,
             episodes: grouped[sNum]
@@ -109,6 +124,10 @@ function setupUserModalTabs(data) {
         seasonsBox.innerHTML = seasonsData.map((season, idx) => {
             const isFirst = idx === 0;
             const seasonId = `user-season-content-${idx}`;
+            // Eğer sezonun kendi içinde bölümleri yoksa ama genel episodes dizisinde bu sezona ait bölüm varsa eşitleyelim
+            const seasonEpisodes = season.episodes && season.episodes.length > 0 
+                ? season.episodes 
+                : (data.episodes ? data.episodes.filter(ep => (ep.seasonNumber || ep.season || 1) === (season.seasonNumber || idx + 1)) : []);
 
             return `
                 <div style="background: #11141a; border: 1px solid #1e232d; border-radius: 8px; margin-bottom: 12px; overflow: hidden;">
@@ -119,14 +138,16 @@ function setupUserModalTabs(data) {
                             ${season.name || `${idx + 1}. Sezon`}
                         </span>
                         <span style="color: #6a7b95; font-size: 13px; font-weight: 500;">
-                            ${(season.episodes ? season.episodes.length : 0)} Bölüm
+                            ${seasonEpisodes.length} Bölüm
                         </span>
                     </button>
 
                     <div id="${seasonId}" class="user-season-episodes-container" style="display: ${isFirst ? 'block' : 'none'}; padding: 14px;">
                         <div style="display: flex; flex-direction: column; gap: 10px;">
-                            ${(season.episodes && season.episodes.length > 0) ? season.episodes.map(ep => {
+                            ${seasonEpisodes.length > 0 ? seasonEpisodes.map(ep => {
                                 const epImg = ep.stillPath || ep.image || ep.poster || data.poster || 'https://placehold.co/120x70/222/fff?text=No+Image';
+                                const epDesc = ep.plot || ep.description || ep.overview || ep.synopsis;
+                                
                                 return `
                                     <div style="display: flex; gap: 12px; background: rgba(0, 0, 0, 0.4); padding: 10px; border-radius: 6px; align-items: center; border: 1px solid #191d26;">
                                         <img src="${epImg}" style="width: 110px; height: 70px; object-fit: cover; border-radius: 4px; flex-shrink: 0;" />
@@ -136,7 +157,7 @@ function setupUserModalTabs(data) {
                                                 <span style="color: #888; font-size: 11px;">⏱️ ${ep.durationMinutes || ep.duration || 45} min</span>
                                             </div>
                                             <p style="color: #8a99ad; font-size: 11px; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                                ${ep.description || ep.overview || 'Açıklama bulunmuyor.'}
+                                                ${epDesc && epDesc.trim() !== "" ? epDesc : 'Açıklama bulunmuyor.'}
                                             </p>
                                         </div>
                                     </div>
@@ -151,11 +172,10 @@ function setupUserModalTabs(data) {
         seasonsBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>`;
     }
 
-// B) FRAGMANLAR TABI
+    // B) FRAGMANLAR TABI
     const trailerBox = document.getElementById("userTabTrailer");
     let allTrailers = [];
 
-    // 1. Ana objede doğrudan trailerKey varsa ekle
     if (data.trailerKey) {
         allTrailers.push({
             title: (data.title || "İçerik") + " Fragman",
@@ -163,11 +183,9 @@ function setupUserModalTabs(data) {
         });
     }
 
-    // 2. Eğer backend'den bir video listesi (videos veya results) geliyorsa onları tara
     const videoList = data.videos || data.results || data.trailerList;
     if (Array.isArray(videoList)) {
         videoList.forEach(vid => {
-            // VideoDto yapısındaki key ve type alanlarını kullanıyoruz
             if (vid.key && (vid.type === "Trailer" || vid.type === "Teaser" || !vid.type)) {
                 allTrailers.push({
                     title: vid.name || "Fragman",
