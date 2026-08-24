@@ -1,5 +1,50 @@
+// Global Toast Bildirim Fonksiyonu
+function showToast(message, type = "success") {
+    let container = document.getElementById("toast-container");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toast-container";
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    
+    let icon = "ℹ️";
+    if (type === "success") icon = "✅";
+    if (type === "error") icon = "❌";
+    if (type === "warning") icon = "⚠️";
+
+    toast.innerHTML = `<span>${icon}</span> <div>${message}</div>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = "fadeOut 0.3s ease forwards";
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+// Buton Loading State Yönetimi
+function setLoading(isLoading, text = "Giriş Yap") {
+    const btn = document.getElementById("submitBtn");
+    const spinner = document.getElementById("btnSpinner");
+    const btnText = document.getElementById("btnText");
+
+    if (!btn) return;
+
+    if (isLoading) {
+        btn.disabled = true;
+        if (spinner) spinner.style.display = "inline-block";
+        if (btnText) btnText.innerText = text;
+    } else {
+        btn.disabled = false;
+        if (spinner) spinner.style.display = "none";
+        if (btnText) btnText.innerText = text;
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. ZATEN GİRİŞ YAPILMIŞ MI KONTROLÜ (Auto-Redirect)
+    // 1. ZATEN GİRİŞ YAPILMIŞ MI KONTROLÜ
     const existingToken = localStorage.getItem("jwtToken");
     const existingRole = localStorage.getItem("userRole");
 
@@ -13,85 +58,63 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const loginForm = document.getElementById("loginForm");
-    const errorMessage = document.getElementById("errorMessage");
-
     if (!loginForm) return;
 
-    // 2. FORM SUBMIT HANDLER
+    // 2. FORM SUBMIT
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        // Input değerlerini al ve boşlukları temizle
         const usernameInput = document.getElementById("username");
         const passwordInput = document.getElementById("password");
 
         const username = usernameInput ? usernameInput.value.trim() : "";
         const password = passwordInput ? passwordInput.value.trim() : "";
 
-        // Hata alanını temizle
-        if (errorMessage) {
-            errorMessage.style.display = "none";
-            errorMessage.textContent = "";
-        }
+        setLoading(true, "Giriş Yapılıyor...");
 
         try {
-            // login.js içindeki fetch kısmı
             const response = await fetch("https://dockerify-movie-recommendation-system.onrender.com/api/auth/login", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                // Backend tam olarak 'username' ve 'password' bekliyor
-                body: JSON.stringify({ username: username, password: password })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
             });
 
-            // 3. BAŞARILI YANIT DURUMU (HTTP 200-299)
             if (response.ok) {
                 const data = await response.json();
 
-                // Backend'den dönen Token ve Role bilgilerini localStorage'a kaydediyoruz
-                if (data.token) {
-                    localStorage.setItem("jwtToken", data.token);
-                }
-                if (data.role) {
-                    localStorage.setItem("userRole", data.role);
-                }
+                if (data.token) localStorage.setItem("jwtToken", data.token);
+                if (data.role) localStorage.setItem("userRole", data.role);
 
-                // Kullanıcının rolüne göre ilgili sayfaya yönlendirme yapıyoruz
-                if (data.role === "ADMIN" || data.role === "ROLE_ADMIN") {
-                    window.location.href = "admin.html";
-                } else {
-                    window.location.href = "showcase.html";
-                }
+                showToast("Giriş başarılı! Yönlendiriliyorsunuz...", "success");
+
+                setTimeout(() => {
+                    if (data.role === "ADMIN" || data.role === "ROLE_ADMIN") {
+                        window.location.href = "admin.html";
+                    } else {
+                        window.location.href = "showcase.html";
+                    }
+                }, 1200);
 
             } else {
-                // 4. BAŞARISIZ YANIT DURUMU (HTTP 401, 400, 404, 500 vb.)
-                const contentType = response.headers.get("content-type");
                 let errorMessageText = "Giriş başarısız. Kullanıcı adı veya şifre hatalı.";
-
-                // Backend JSON yanıt döndüyse (ör. {"message": "..."})
-                if (contentType && contentType.includes("application/json")) {
-                    const errorData = await response.json();
-                    errorMessageText = errorData.message || errorMessageText;
+                
+                if (response.status === 401) {
+                    errorMessageText = "Hatalı kullanıcı adı veya şifre!";
                 } else {
-                    // Backend düz metin gönderdiyse (ör. Spring Security'nin varsayılan "Bad credentials" yanıtı)
-                    const textError = await response.text(); 
-                    if (textError) errorMessageText = textError;
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const errorData = await response.json();
+                        errorMessageText = errorData.message || errorMessageText;
+                    }
                 }
 
-                // Hata mesajını ekrana bas
-                if (errorMessage) {
-                    errorMessage.textContent = errorMessageText;
-                    errorMessage.style.display = "block";
-                }
+                showToast(errorMessageText, "error");
+                setLoading(false, "Giriş Yap");
             }
         } catch (error) {
-            // 5. SADECE AĞ VEYA SUNUCUYA HİÇ ULAŞILAMAMA DURUMU (Network Errors)
             console.error("Ağ veya Sunucu Hatası:", error);
-            if (errorMessage) {
-                errorMessage.textContent = "Sunucuya bağlanırken bir hata oluştu. Lütfen backend'in çalıştığından emin olun.";
-                errorMessage.style.display = "block";
-            }
+            showToast("Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.", "error");
+            setLoading(false, "Giriş Yap");
         }
     });
 });

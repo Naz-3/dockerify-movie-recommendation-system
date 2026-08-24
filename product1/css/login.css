@@ -1,12 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
 body {
-    background-color: #0f0f11;
+    background: radial-gradient(circle at top left, #1a1c29, #0e0f17);
     color: #ffffff;
     display: flex;
     justify-content: center;
@@ -14,127 +16,158 @@ body {
     min-height: 100vh;
 }
 
-.auth-container {
+/* Glassmorphism Auth Container */
+.login-container, .auth-container {
     width: 100%;
-    max-width: 400px;
-    padding: 30px;
-    background-color: #18181c;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    max-width: 420px;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
-.back-link {
-    color: #aaaaaa;
-    text-decoration: none;
-    font-size: 14px;
-    display: inline-block;
-    margin-bottom: 20px;
-    transition: color 0.2s;
-}
-
-.back-link:hover {
-    color: #ffffff;
-}
-
-.tab-header {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 25px;
-    border-bottom: 1px solid #2a2a30;
-    padding-bottom: 10px;
-}
-
-.tab-btn {
-    flex: 1;
-    background: none;
-    border: none;
-    color: #888888;
-    font-size: 16px;
-    font-weight: 600;
-    padding: 8px 0;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.tab-btn.active {
-    color: #ffffff;
-    border-bottom: 2px solid #e50914; /* Vurgu rengi */
-}
-
-.auth-form h2 {
-    font-size: 24px;
-    margin-bottom: 6px;
-}
-
-.subtitle {
-    color: #888888;
-    font-size: 14px;
-    margin-bottom: 20px;
+.login-container h2, .auth-container h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    text-align: center;
+    background: linear-gradient(135deg, #e50914, #ff4757);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .form-group {
     margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
 }
 
 .form-group label {
-    display: block;
     font-size: 13px;
-    color: #cccccc;
+    font-weight: 500;
     margin-bottom: 6px;
+    color: #9ca3af;
 }
 
-.form-group input {
+.form-group input, .form-input {
     width: 100%;
-    padding: 10px 12px;
-    background-color: #26262c;
-    border: 1px solid #3a3a42;
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 12px 16px;
+    border-radius: 8px;
     color: #ffffff;
     font-size: 14px;
     outline: none;
+    transition: all 0.3s ease;
 }
 
-.form-group input:focus {
+.form-group input:focus, .form-input:focus {
     border-color: #e50914;
+    box-shadow: 0 0 12px rgba(229, 9, 20, 0.3);
+    background: rgba(255, 255, 255, 0.08);
 }
 
-.submit-btn {
+/* Yükleniyor Animasyonlu Buton */
+.submit-btn, .login-btn, button[type="submit"] {
     width: 100%;
     padding: 12px;
-    background-color: #e50914;
+    background: linear-gradient(135deg, #e50914, #b80710);
     color: #ffffff;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
     margin-top: 10px;
 }
 
-.submit-btn:hover {
-    background-color: #b80710;
+.submit-btn:hover, .login-btn:hover, button[type="submit"]:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(229, 9, 20, 0.4);
 }
 
-.hidden {
-    display: none !important;
+.submit-btn:disabled, button[type="submit"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-.alert {
-    padding: 10px 14px;
-    border-radius: 6px;
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+p, .register-link {
+    text-align: center;
+    margin-top: 20px;
     font-size: 13px;
-    margin-bottom: 15px;
+    color: #9ca3af;
 }
 
-.alert.success {
-    background-color: #1b4332;
-    color: #758e4f;
-    border: 1px solid #2d6a4f;
+p a, .register-link a {
+    color: #e50914;
+    text-decoration: none;
+    font-weight: 600;
 }
 
-.alert.error {
-    background-color: #4a151b;
-    color: #ff8a8a;
-    border: 1px solid #7f1d1d;
+p a:hover, .register-link a:hover {
+    text-decoration: underline;
+}
+
+/* Sağ Üst Toast Bildirimleri */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    min-width: 300px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: rgba(22, 24, 38, 0.95);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-left: 4px solid #e50914;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease forwards;
+}
+
+.toast.success { border-left-color: #10b981; }
+.toast.error { border-left-color: #ef4444; }
+.toast.warning { border-left-color: #f59e0b; }
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { transform: translateX(100%); opacity: 0; }
 }
