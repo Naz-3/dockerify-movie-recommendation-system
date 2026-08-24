@@ -73,52 +73,85 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.body.insertAdjacentHTML("beforeend", modalHTML);
     }
 
-    // Modal Penceresini Açma
-    window.openDetailModal = function(id) {
-        const item = currentData.find(m => Number(m.id) === Number(id));
-        if (!item) return;
-
+    // Modal Penceresini Açma (API'den Detay Verisini Çekerek)
+    window.openDetailModal = async function(id) {
         const overlay = document.getElementById("detailModalOverlay");
-        overlay.classList.add("active");
+        if (overlay) overlay.classList.add("active");
 
-        document.getElementById("modalTitle").innerText = item.title || 'İçerik Detayı';
-        document.getElementById("modalTypeBadge").innerText = (item.genre || item.type || 'MOVIE').toUpperCase();
-        
-        const posterSrc = item.poster || item.posterUrl || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
-        document.getElementById("modalHero").style.backgroundImage = `url('${posterSrc}')`;
+        // Yükleniyor durumunu göster
+        document.getElementById("modalTitle").innerText = "Yükleniyor...";
+        document.getElementById("episodesList").innerHTML = "<p style='color:#aaa;'>Bölüm bilgileri çekiliyor...</p>";
+        document.getElementById("trailersGrid").innerHTML = "";
+        document.getElementById("btsGrid").innerHTML = "";
 
-        // İzlenme Hesabı (Veritabanında yoksa varsayılan rastgele/0 başlangıç)
-        const watched = item.watchedMinutes || 0;
-        const total = item.durationMinutes || 120;
-        const percent = Math.min(Math.round((watched / total) * 100), 100);
+        try {
+            const response = await fetch(`${BASE_URL}/${id}`, {
+                headers: getAuthHeaders()
+            });
 
-        document.getElementById("watchTimeText").innerText = `Kaldığı Yer: ${watched}. dk / ${total} dk`;
-        document.getElementById("watchPercentText").innerText = `%${percent} Tamamlandı`;
-        document.getElementById("modalProgressFill").style.width = `${percent}%`;
+            if (!response.ok) throw new Error("Detay verisi alınamadı.");
 
-        // Bölümler Tabı
-        const epContainer = document.getElementById("episodesList");
-        if (item.seasons && item.seasons.length > 0) {
-            epContainer.innerHTML = item.seasons.map(s => `
-                <div style="margin-bottom:10px; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px;">
-                    <strong style="color:#fff;">${s.name || 'Sezon'}</strong>
-                    <p style="font-size:12px; color:#aaa;">${s.episodesCount || 10} Bölüm</p>
-                </div>
-            `).join('');
-        } else {
-            epContainer.innerHTML = "<p style='color:#aaa;'>Bu içerik bir filmdir veya bölüm verisi eklenmemiştir.</p>";
+            const item = await response.json();
+
+            // Başlık ve Tip
+            document.getElementById("modalTitle").innerText = item.title || 'İçerik Detayı';
+            document.getElementById("modalTypeBadge").innerText = (item.genre || item.type || item.contentType || 'MOVIE').toUpperCase();
+            
+            // Poster / Banner Görseli
+            const posterSrc = item.poster || item.posterUrl || item.bannerUrl || 'https://placehold.co/300x450?text=G%C3%B6rsel+Yok';
+            document.getElementById("modalHero").style.backgroundImage = `url('${posterSrc}')`;
+
+            // İzlenme Hesabı
+            const watched = item.watchedMinutes || item.progressMinutes || 0;
+            const total = item.durationMinutes || item.totalMinutes || 120;
+            const percent = Math.min(Math.round((watched / total) * 100), 100);
+
+            document.getElementById("watchTimeText").innerText = `Kaldığı Yer: ${watched}. dk / ${total} dk`;
+            document.getElementById("watchPercentText").innerText = `%${percent} Tamamlandı`;
+            document.getElementById("modalProgressFill").style.width = `${percent}%`;
+
+            // Sezon & Bölümler Listesi
+            const epContainer = document.getElementById("episodesList");
+            const seasonsData = item.seasons || item.seasonList || [];
+            const episodesData = item.episodes || item.episodeList || [];
+
+            if (seasonsData.length > 0) {
+                epContainer.innerHTML = seasonsData.map(s => `
+                    <div style="margin-bottom:12px; background:rgba(255,255,255,0.05); padding:12px; border-radius:8px;">
+                        <strong style="color:#fff; font-size:15px;">${s.name || s.title || 'Sezon'}</strong>
+                        <p style="font-size:13px; color:#aaa; margin-top:4px;">${s.episodesCount || (s.episodes ? s.episodes.length : 0)} Bölüm</p>
+                    </div>
+                `).join('');
+            } else if (episodesData.length > 0) {
+                epContainer.innerHTML = episodesData.map((ep, idx) => `
+                    <div style="margin-bottom:8px; background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#fff; font-size:14px;">${idx + 1}. ${ep.title || ep.name || 'Bölüm'}</span>
+                        <span style="color:#888; font-size:12px;">${ep.duration || '45 dk'}</span>
+                    </div>
+                `).join('');
+            } else {
+                epContainer.innerHTML = "<p style='color:#aaa;'>Bu içerik bir filmdir veya bölüm verisi eklenmemiştir.</p>";
+            }
+
+            // Fragmanlar
+            const trailerGrid = document.getElementById("trailersGrid");
+            const trailerUrl = item.trailerUrl || item.trailer;
+            trailerGrid.innerHTML = trailerUrl 
+                ? `<iframe src="${trailerUrl.replace('watch?v=', 'embed/')}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;" allowfullscreen></iframe>`
+                : "<p style='color:#aaa;'>Fragman bulunamadı.</p>";
+
+            // Sahne Arkası (BTS)
+            const btsGrid = document.getElementById("btsGrid");
+            const btsUrl = item.btsUrl || item.behindTheScenesUrl;
+            btsGrid.innerHTML = btsUrl 
+                ? `<iframe src="${btsUrl.replace('watch?v=', 'embed/')}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;" allowfullscreen></iframe>`
+                : "<p style='color:#aaa;'>Sahne arkası çekim videosu bulunamadı.</p>";
+
+        } catch (error) {
+            console.error("Detay Çekme Hatası:", error);
+            document.getElementById("modalTitle").innerText = "Hata Oluştu";
+            document.getElementById("episodesList").innerHTML = "<p style='color:#ef4444;'>İçerik detayları veritabanından yüklenemedi.</p>";
         }
-
-        // Fragman ve BTS
-        const trailerGrid = document.getElementById("trailersGrid");
-        trailerGrid.innerHTML = item.trailerUrl 
-            ? `<iframe src="${item.trailerUrl.replace('watch?v=', 'embed/')}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;"></iframe>`
-            : "<p style='color:#aaa;'>Fragman bulunamadı.</p>";
-
-        const btsGrid = document.getElementById("btsGrid");
-        btsGrid.innerHTML = item.btsUrl 
-            ? `<iframe src="${item.btsUrl.replace('watch?v=', 'embed/')}" style="width:100%; aspect-ratio:16/9; border:none; border-radius:8px;"></iframe>`
-            : "<p style='color:#aaa;'>Sahne arkası çekim videosu yok.</p>";
     };
 
     window.closeDetailModal = function() {
@@ -129,7 +162,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelectorAll(".modal-tab-btn").forEach(btn => btn.classList.remove("active"));
         document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
 
-        event.target.classList.add("active");
+        if (event && event.target) {
+            event.target.classList.add("active");
+        }
         document.getElementById(`tab-${tabName}`).classList.add("active");
     };
 
@@ -189,7 +224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // Kart Oluşturucu (İlerleme çubuğu ve Detay Tıklaması eklendi)
+    // Kart Oluşturucu
     function createCard(item) {
         const itemId = Number(item.id);
         const isFav = favorites.includes(itemId);
