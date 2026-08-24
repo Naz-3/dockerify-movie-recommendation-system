@@ -1,4 +1,7 @@
-const BASE_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases';
+const POSSIBLE_BASE_URLS = [
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases',
+    'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/showcases'
+];
 const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
 let currentShowcaseId = null;
 
@@ -105,7 +108,7 @@ async function fetchRealMoviePoster(title) {
     
     try {
         const response = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=3fd2be6f0c70a2a598f084ddfb75487c&query=${encodeURIComponent(title)}&language=tr-TR`);
-        if (!response.ok) throw new Error("TMDB yanıt vermedi");
+        if (!response.ok) throw new Error();
         
         const data = await response.json();
         if (data && data.results && data.results.length > 0) {
@@ -115,7 +118,7 @@ async function fetchRealMoviePoster(title) {
             }
         }
     } catch (e) {
-        console.warn("TMDB Poster çekme hatası:", title, e);
+        console.warn("TMDB Poster çekme hatası:", title);
     }
     
     return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
@@ -233,23 +236,40 @@ async function generateShowcase() {
     if (loading) loading.classList.remove('hidden');
     if (previewCard) previewCard.classList.add('hidden');
 
+    let response = null;
+    let data = null;
+
+    // Doğru endpoint yolunu bulana kadar alternatifleri dener
+    for (const baseUrl of POSSIBLE_BASE_URLS) {
+        try {
+            const targetUrl = `${baseUrl}/suggest?city=${encodeURIComponent(city)}&userId=${userId}`;
+            const res = await fetch(targetUrl, {
+                method: 'GET',
+                headers: getAuthHeaders()
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                logout();
+                return;
+            }
+
+            if (res.ok) {
+                response = res;
+                data = await res.json();
+                break;
+            }
+        } catch (e) {
+            console.warn("Base URL denenirken hata:", baseUrl);
+        }
+    }
+
+    if (!response || !data) {
+        if (loading) loading.classList.add('hidden');
+        alert('Vitrin oluşturulurken bir hata meydana geldi: 404 - Endpoint bulunamadı.');
+        return;
+    }
+
     try {
-        const response = await fetch(`${BASE_URL}/suggest?city=${encodeURIComponent(city)}&userId=${userId}`, {
-            method: 'GET',
-            headers: getAuthHeaders()
-        });
-        
-        if (response.status === 401 || response.status === 403) {
-            logout();
-            return;
-        }
-
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Sunucu hatası: ${response.status} - ${errText}`);
-        }
-
-        const data = await response.json();
         currentShowcaseId = data.showcaseId;
 
         const rawTrigger = data.triggerReason || '';
@@ -339,8 +359,8 @@ async function generateShowcase() {
         if (previewCard) previewCard.classList.remove('hidden');
 
     } catch (error) {
-        console.error("Showcase generation error:", error);
-        alert(`Vitrin oluşturulurken bir hata meydana geldi: ${error.message}`);
+        console.error("Showcase parsing error:", error);
+        alert(`Vitrin işlenirken bir hata meydana geldi: ${error.message}`);
     } finally {
         if (loading) loading.classList.add('hidden');
     }
@@ -353,7 +373,7 @@ async function approveShowcase() {
     }
 
     try {
-        const response = await fetch(`${BASE_URL}/${currentShowcaseId}/approve`, {
+        const response = await fetch(`https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases/${currentShowcaseId}/approve`, {
             method: 'POST',
             headers: getAuthHeaders()
         });
