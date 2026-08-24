@@ -151,86 +151,50 @@ function setupUserModalTabs(data) {
         seasonsBox.innerHTML = `<p style="color: #888; font-size: 13px; padding: 10px 0;">Bu diziye ait henüz sezon veya bölüm bilgisi yüklenmedi.</p>`;
     }
 
-// B) FRAGMANLAR TABI (Bölümler ve Sezonlar İçinden Video Yakalama)
+// B) FRAGMANLAR TABI
     const trailerBox = document.getElementById("userTabTrailer");
     let allTrailers = [];
 
-    // 1. Ana objeden gelenler
-    if (data.trailers && Array.isArray(data.trailers)) {
-        allTrailers = data.trailers;
-    } else if (data.videos && Array.isArray(data.videos)) {
-        allTrailers = data.videos;
-    } else if (data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl) {
+    // 1. Ana objede doğrudan trailerKey varsa ekle
+    if (data.trailerKey) {
         allTrailers.push({
             title: (data.title || "İçerik") + " Fragman",
-            videoUrl: data.trailerKey || data.trailerUrl || data.trailer || data.videoUrl
+            videoUrl: data.trailerKey
         });
     }
 
-    // 2. Sezonlar ve Bölümler içerisindeki tüm video/fragman alanlarını tara
-    const seasonsArr = data.seasons || data.seasonList || [];
-    const episodesArr = data.episodes || data.episodeList || [];
-
-    seasonsArr.forEach(season => {
-        const sUrl = season.trailerKey || season.trailerUrl || season.trailer || season.videoUrl || season.videoKey;
-        if (sUrl) {
-            allTrailers.push({
-                title: season.name || "Sezon Fragmanı",
-                videoUrl: sUrl
-            });
-        }
-        if (season.episodes && Array.isArray(season.episodes)) {
-            season.episodes.forEach(ep => {
-                const epUrl = ep.trailerKey || ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey;
-                if (epUrl) {
-                    allTrailers.push({
-                        title: `${ep.seasonNumber || 1}. Sezon ${ep.episodeNumber || ep.episode_number || 1}. Bölüm Fragmanı`,
-                        videoUrl: epUrl,
-                        thumbnailUrl: ep.stillPath || ep.image || data.poster
-                    });
-                }
-            });
-        }
-    });
-
-    episodesArr.forEach(ep => {
-        const epUrl = ep.trailerKey || ep.trailerUrl || ep.trailer || ep.videoUrl || ep.videoKey;
-        if (epUrl) {
-            allTrailers.push({
-                title: `${ep.seasonNumber || 1}. Sezon ${ep.episodeNumber || ep.episode_number || 1}. Bölüm`,
-                videoUrl: epUrl,
-                thumbnailUrl: ep.stillPath || ep.image || data.poster
-            });
-        }
-    });
-
-    // Benzersiz hale getir
-    allTrailers = Array.from(new Set(allTrailers.map(t => t.videoUrl)))
-        .map(url => allTrailers.find(t => t.videoUrl === url));
+    // 2. Eğer backend'den bir video listesi (videos veya results) geliyorsa onları tara
+    const videoList = data.videos || data.results || data.trailerList;
+    if (Array.isArray(videoList)) {
+        videoList.forEach(vid => {
+            // VideoDto yapısındaki key ve type alanlarını kullanıyoruz
+            if (vid.key && (vid.type === "Trailer" || vid.type === "Teaser" || !vid.type)) {
+                allTrailers.push({
+                    title: vid.name || "Fragman",
+                    videoUrl: vid.key
+                });
+            }
+        });
+    }
 
     if (allTrailers.length > 0) {
         trailerBox.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 10px;">
                 ${allTrailers.map(tr => {
-                    let vUrl = tr.videoUrl || "";
+                    let vUrl = tr.videoUrl;
                     if (!vUrl.includes("http") && !vUrl.includes("/")) {
                         vUrl = `https://www.youtube.com/embed/${vUrl}`;
-                    } else if (vUrl.includes("watch?v=")) {
-                        vUrl = vUrl.replace("watch?v=", "embed/");
-                    } else if (vUrl.includes("youtu.be/")) {
-                        vUrl = vUrl.replace("youtu.be/", "youtube.com/embed/");
                     }
-
-                    const thumb = tr.thumbnailUrl || data.poster || 'https://placehold.co/220x120/222/fff?text=Trailer';
+                    const thumb = data.poster || 'https://placehold.co/220x120/222/fff?text=Trailer';
                     
                     return `
-                        <div onclick="openUserVideoModal('${vUrl}', '${tr.title || 'Fragman'}')" style="background: #151922; border: 1px solid #1e232d; border-radius: 8px; overflow: hidden; cursor: pointer;">
+                        <div onclick="openUserVideoModal('${vUrl}', '${tr.title}')" style="background: #151922; border: 1px solid #1e232d; border-radius: 8px; overflow: hidden; cursor: pointer;">
                             <div style="position: relative; height: 120px; background: #0b0d12;">
                                 <img src="${thumb}" style="width: 100%; height: 100%; object-fit: cover;" />
                                 <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: rgba(229, 9, 20, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;">▶</div>
                             </div>
                             <div style="padding: 10px;">
-                                <p style="color: #fff; font-size: 12px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${tr.title || 'Fragman'}</p>
+                                <p style="color: #fff; font-size: 12px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${tr.title}</p>
                             </div>
                         </div>
                     `;
