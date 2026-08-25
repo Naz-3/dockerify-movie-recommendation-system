@@ -1,5 +1,4 @@
 const BASE_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/v1/showcases';
-const USERS_URL = 'https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users';
 let currentShowcaseId = null;
 
 const defaultCities = [
@@ -34,6 +33,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const userDisplay = document.getElementById("activeUsernameDisplay");
     if (userDisplay) {
         userDisplay.textContent = activeUser;
+    }
+
+    // Rol bazlı kontrol (User vs Admin ayrımı için frontend yönlendirmesi)
+    const userRole = localStorage.getItem("role") || localStorage.getItem("userRole") || "USER";
+    const approveBtn = document.getElementById("approveShowcaseBtn") || document.querySelector(".btn-success");
+    if (approveBtn) {
+        if (userRole.toUpperCase() !== "ADMIN" && userRole.toUpperCase() !== "OPERATOR") {
+            approveBtn.style.display = "none"; // Normal kullanıcı onay butonunu göremez
+        }
     }
 
     const generateBtn = document.getElementById("generateBtn");
@@ -121,87 +129,6 @@ async function fetchRealMoviePoster(title) {
     return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
 }
 
-function ensureDetailModalExists() {
-    if (document.getElementById('movieDetailModal')) return;
-
-    const modalHTML = `
-        <div id="movieDetailModal" class="movie-modal-overlay hidden">
-            <div class="movie-modal-content">
-                <button class="modal-close-btn" onclick="closeMovieDetails()">✕</button>
-                <div class="modal-body-wrapper">
-                    <img id="modalPoster" src="" alt="Poster" />
-                    <div class="modal-info">
-                        <h3 id="modalTitle">Film Adı</h3>
-                        <div id="modalMeta" class="modal-meta-badges"></div>
-                        <p id="modalDescription">AI analizi...</p>
-                        <div class="modal-actions">
-                            <button id="modalAddToListBtn" class="btn-primary" onclick="addCurrentMovieToWatchlist()">🎬 Listeme Ekle</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-let activeModalMovie = null;
-
-function openMovieDetails(title, rating, genre, duration, posterUrl) {
-    ensureDetailModalExists();
-    activeModalMovie = { title, rating, genre, duration, posterUrl };
-
-    document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalPoster').src = posterUrl;
-    document.getElementById('modalMeta').innerHTML = `<span>⭐ ${rating}</span> <span>🎭 ${genre}</span> <span>⏱️ ${duration} dk</span>`;
-    document.getElementById('modalDescription').innerText = `"${title}" içeriği, yapay zeka direktörümüz tarafından mevcut hava koşullarınız ve geçmiş izleme tercihleriniz analiz edilerek bu hafta için özel olarak önerilmiştir.`;
-    
-    document.getElementById('movieDetailModal').classList.remove('hidden');
-}
-
-function closeMovieDetails() {
-    const modal = document.getElementById('movieDetailModal');
-    if (modal) modal.classList.add('hidden');
-}
-
-async function addCurrentMovieToWatchlist() {
-    if (!activeModalMovie) {
-        alert("Eklenecek içerik bulunamadı!");
-        return;
-    }
-
-    const userId = getActiveUserId();
-    const token = localStorage.getItem("jwtToken");
-    
-    try {
-        let response = await fetch(`https://dockerify-movie-recommendation-system-cuj7.onrender.com/api/users/${userId}/watchlist`, {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": token ? `Bearer ${token}` : ""
-            },
-            body: JSON.stringify({
-                title: activeModalMovie.title,
-                genre: activeModalMovie.genre,
-                rating: activeModalMovie.rating,
-                duration: activeModalMovie.duration,
-                posterUrl: activeModalMovie.posterUrl,
-                userId: userId
-            })
-        });
-
-        if (response.ok) {
-            alert(`🎉 "${activeModalMovie.title}" başarıyla listenize eklendi!`);
-            closeMovieDetails();
-        } else {
-            alert(`"${activeModalMovie.title}" listenize eklenirken bir hata oluştu.`);
-        }
-    } catch (err) {
-        console.warn("Watchlist hata:", err);
-        alert("Sunucuya bağlanılamadı.");
-    }
-}
-
 async function generateShowcase() {
     const cityInput = document.getElementById('cityInput');
     const city = cityInput ? cityInput.value.trim() : '';
@@ -283,40 +210,29 @@ async function generateShowcase() {
                         posterUrl = await fetchRealMoviePoster(title);
                     }
 
-                    const rating = movie.rating || '8.4';
+                    const rating = (movie.rating && movie.rating !== 'N/A') ? `⭐ ${movie.rating}` : '';
                     const genre = movie.genre || 'Fantastik / Macera';
-                    const duration = movie.durationInMinutes || movie.duration || '135';
+                    const duration = movie.durationInMinutes || movie.duration || '120';
 
                     const card = document.createElement('div');
                     card.className = 'movie-card';
-                    
-                    card.addEventListener('click', () => {
-                        openMovieDetails(title, rating, genre, duration, posterUrl);
-                    });
-
                     card.innerHTML = `
-                        <div class="movie-poster-container">
-                            <img src="${posterUrl}" alt="${title}" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop'" />
+                        <div class="movie-poster-wrapper" style="width: 100%; height: 180px; overflow: hidden; border-radius: 8px 8px 0 0; margin-bottom: 10px;">
+                            <img src="${posterUrl}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop'" />
                         </div>
-                        <div class="movie-card-content">
-                            <div>
-                                <div class="movie-header">
-                                    <span class="movie-number">#${index + 1} Öneri</span>
-                                    <span class="movie-rating">⭐ ${rating}</span>
-                                </div>
-                                <div class="movie-title" title="${title}">${title}</div>
-                                <div class="movie-meta">
-                                    <span>🎭 ${genre}</span>
-                                    <span>⏱️ ${duration} dk</span>
-                                </div>
+                        <div class="movie-card-content" style="padding: 10px;">
+                            <div class="movie-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <span class="movie-number" style="font-size: 0.85rem; font-weight: bold; color: #4f46e5;">#${index + 1} Öneri</span>
+                                <span class="movie-rating" style="font-size: 0.85rem; font-weight: bold; color: #d97706;">${rating}</span>
+                            </div>
+                            <div class="movie-title" style="font-size: 1rem; font-weight: bold; margin-bottom: 6px; color: #1f2937;" title="${title}">${title}</div>
+                            <div class="movie-meta" style="font-size: 0.8rem; color: #4b5563; display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>🎭 ${genre}</span>
+                                <span>⏱️ ${duration} dk</span>
                             </div>
                             
-                            <div class="movie-tag-wrapper">
-                                <span class="movie-tag">🎯 AI Analiz Özeti</span>
-                                <ul class="tooltip-list">
-                                    <li>👤 <strong>Kullanıcı:</strong> ${selectedUserName} geçmişine uygun.</li>
-                                    <li>🌤️ <strong>Ortam:</strong> ${city} (${weatherInfo.text}, ${weatherInfo.temp}) için ideal.</li>
-                                </ul>
+                            <div class="movie-tag-wrapper" style="background: #f3f4f6; padding: 6px; border-radius: 6px; font-size: 0.75rem; color: #374151;">
+                                <span>🎯 <strong>AI Analiz:</strong> ${city} (${weatherInfo.text}) koşullarına ve ${selectedUserName} alışkanlıklarına uygun.</span>
                             </div>
                         </div>
                     `;
