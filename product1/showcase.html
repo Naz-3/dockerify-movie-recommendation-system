@@ -76,11 +76,25 @@
         </div>
     </div>
 
+
+    <!-- İÇERİK DETAY MODALI -->
+    <div id="movieModal" class="movie-modal-overlay hidden" aria-hidden="true">
+        <div class="movie-modal-content" role="dialog" aria-modal="true" aria-labelledby="modalMovieTitle">
+            <button id="modalCloseBtn" class="modal-close-btn" type="button" aria-label="Kapat">✕</button>
+            <div class="modal-body-wrapper">
+                <div class="modal-poster-wrap"><img id="modalMoviePoster" src="" alt="" /></div>
+                <div class="modal-info">
+                    <h3 id="modalMovieTitle">İçerik</h3>
+                    <div id="modalMovieMeta" class="modal-meta-badges"></div>
+                    <p id="modalMovieDescription"></p>
+                    <div id="modalMovieCast" class="modal-cast"></div>
+                    <div class="modal-actions"><button id="modalWatchBtn" class="btn-primary" type="button">▶ Şimdi İzle</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="js/auth-guard.js"></script>
     <script src="js/showcase.js"></script>
     <script src="js/user-details-modal.js"></script>
 </body>
 </html>
-
-
-
