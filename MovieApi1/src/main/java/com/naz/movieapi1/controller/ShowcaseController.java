@@ -3,6 +3,8 @@ package com.naz.movieapi1.controller;
 import com.naz.movieapi1.dto.showcase.ShowcaseDetailDto;
 import com.naz.movieapi1.dto.showcase.ShowcaseSuggestionDto;
 import com.naz.movieapi1.service.ShowcaseService;
+import com.naz.movieapi1.service.ShowcaseGenerationService;
+import com.naz.movieapi1.dto.showcase.ShowcaseGenerationRequestResponse;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,9 +23,11 @@ import java.util.List;
 public class ShowcaseController {
 
     private final ShowcaseService showcaseService;
+    private final ShowcaseGenerationService generationService;
 
-    public ShowcaseController(ShowcaseService showcaseService) {
+    public ShowcaseController(ShowcaseService showcaseService, ShowcaseGenerationService generationService) {
         this.showcaseService = showcaseService;
+        this.generationService = generationService;
     }
 
     /**
@@ -49,6 +53,12 @@ public class ShowcaseController {
             @RequestParam Long userId,
             @RequestParam String city) {
         return ResponseEntity.ok(showcaseService.generateWeatherBasedShowcase(userId, city));
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity<ShowcaseGenerationRequestResponse> generateAsync(
+            @RequestParam Long userId, @RequestParam String city) {
+        return ResponseEntity.accepted().body(generationService.request(userId, city));
     }
 
     /**

@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: orchestrator-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    consumer:
+      group-id: orchestrator-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: com.naz.orchestrator.event
+        spring.json.value.default.type: com.naz.orchestrator.event.ShowcaseGenerationRequestedV1
+        spring.json.type.mapping: showcaseRequested:com.naz.orchestrator.event.ShowcaseGenerationRequestedV1
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: showcaseGenerated:com.naz.orchestrator.event.ShowcaseGeneratedV1,showcaseFailed:com.naz.orchestrator.event.ShowcaseGenerationFailedV1
+    listener:
+      ack-mode: record
+
+server:
+  port: 8083
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://discovery-server:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+orchestrator:
+  topics:
+    showcase-generation-requested: showcase.generation.requested.v1
+    showcase-generated: showcase.generated.v1
+    showcase-generation-failed: showcase.generation.failed.v1
+  movie-service:
+    base-url: ${MOVIE_SERVICE_BASE_URL:http://movie-service:8081}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
+    model: ${OPENAI_MODEL:gpt-4o-mini}

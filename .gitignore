@@ -8,4 +8,5 @@ target/
 .vs/
 
 *.log
+database-backups/
 MovieApi1/.git-old/

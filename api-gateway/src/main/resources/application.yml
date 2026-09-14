@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: lb://AUTH-SERVICE
+          predicates: [ Path=/api/auth/** ]
+        - id: movie-service
+          uri: lb://MOVIE-SERVICE
+          predicates: [ Path=/api/** ]
+server:
+  port: 8080
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://discovery-server:8761/eureka/}

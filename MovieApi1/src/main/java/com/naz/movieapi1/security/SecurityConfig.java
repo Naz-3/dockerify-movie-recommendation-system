@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public statik sayfalar ve auth istekleri
-                        .requestMatchers("/api/auth/**", "/login.html", "/register.html", "/index.html", "/static/**", "/css/**", "/js/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/internal/**", "/login.html", "/register.html", "/index.html", "/static/**", "/css/**", "/js/**").permitAll()
                         
                         // Swagger ve OpenAPI dokümantasyon izinleri
                         .requestMatchers(
@@ -75,7 +75,7 @@ public class SecurityConfig {
         return source;
     }
 
-    // 3. EKSİK OLAN KISIM BURASI: UserDetailsService ile PasswordEncoder'ı birleştiren Provider
+    // serDetailsService ile PasswordEncoder'ı birleştiren Provider
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();

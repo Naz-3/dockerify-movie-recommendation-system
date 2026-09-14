@@ -1,22 +1,47 @@
 services:
-  backend:
-    container_name: backend
+  discovery-server:
+    build: ./discovery-server
+    ports: ["8761:8761"]
+    networks: [master]
+
+  api-gateway:
+    build: ./api-gateway
+    ports: ["8080:8080"]
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka/
+    depends_on: [discovery-server]
+    networks: [master]
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      AUTH_DB_URL: ${AUTH_DB_URL}
+      AUTH_DB_USERNAME: ${AUTH_DB_USERNAME}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      EUREKA_URL: http://discovery-server:8761/eureka/
+    depends_on: [discovery-server]
+    networks: [master]
+
+  movie-service:
+    container_name: movie-service
     build:
       context: ./MovieApi1
     ports:
-      - "8080"
+      - "8081:8081"
     environment:
-      DB_URL: ${PRODUCTION_DB_URL}
-      DB_PASSWORD: ${PRODUCTION_DB_PASSWORD}
-      DB_USERNAME: ${PRODUCTION_DB_USER}
+      PRODUCTION_DB_URL: ${PRODUCTION_DB_URL}
+      PRODUCTION_DB_PASSWORD: ${PRODUCTION_DB_PASSWORD}
+      PRODUCTION_DB_USER: ${PRODUCTION_DB_USER}
       OMDB_API_KEY: ${OMDB_API_KEY}
       TMDB_API_KEY: ${TMDB_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      APPLICATION_SECURITY_JWT_SECRET_KEY: ${JWT_SECRET}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks:
       - master
-    depends_on:
-      postgres:
-        condition: service_healthy
+    depends_on: [discovery-server, kafka]
     restart: unless-stopped
     
 
@@ -30,29 +55,36 @@ services:
       - master
     restart: unless-stopped
 
-  postgres:
-    container_name: postgres
-    image: postgres:16
-    restart: unless-stopped
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    ports: 
+      - "9092:9092"
     environment:
-      POSTGRES_USER: ${PRODUCTION_DB_USER}
-      POSTGRES_PASSWORD: ${PRODUCTION_DB_PASSWORD}
-      POSTGRES_DB: pgdb
-    expose:
-      - "5432"
-    volumes:
-      - pg:/var/lib/postgresql/data
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker, controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     networks:
       - master
-    healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -U pgusr -d pgdb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    restart: unless-stopped
 
-volumes:
-  pg:
+  orchestrator-service:
+    build: ./orchestrator-service
+    ports: ["8083:8083"]
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MOVIE_SERVICE_BASE_URL: http://movie-service:8081
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on: [discovery-server, kafka]
+    networks: [master]
+    restart: unless-stopped
 
 networks:
   master:

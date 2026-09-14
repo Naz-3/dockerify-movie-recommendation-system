@@ -6,6 +6,8 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface ShowcaseRepository extends JpaRepository<Showcase, Long> {
@@ -13,4 +15,5 @@ public interface ShowcaseRepository extends JpaRepository<Showcase, Long> {
 
     //belirli iki tarih arasindaki onaylanmis-planlanmis vitrinler icin
     List<Showcase> findByScheduledDateBetween(LocalDate startDate, LocalDate endDate);
+    Optional<Showcase> findByCorrelationId(UUID correlationId);
 }
